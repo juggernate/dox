@@ -365,6 +365,146 @@ def createArmRig(controlScale=1, pv=1, *args):
     lockChannels(0, 0, 0, 1, armIkTrans, poleVector)
     zeroRadius(*parents)
 
+def createLegRig(controlScale=1, pv=1, **kwargs):
+    legBones = kwargs['legBones']
+    legLoc = kwargs['legLoc']
+    #Build RIG, FK and IK bone setups
+    controls, parents = createControlJoint(*legBones)
+    controlBase = [str(controls[0])[:-5], str(controls[1])[:-5], str(controls[2])[:-5]]
+    controlName = str(str(parents[0])[0]+'_leg')
+    attrName = controlName.lower()[0]+'Leg'
+    color = limbColor(legBones[0])
+    root = str(cmds.listRelatives(parents[0], p=1, f=1))
+    root = list(root.split('|'))
+    root = root[1]
+    pelvis = cmds.listRelatives(parents[0], p=1)
+    rig = []
+    ik = []
+    n = 0
+    legControlScaleY = [20, 15, 8, 8]
+    legControlScaleZ = [20, 15, 13, 13]
+    for control in controls[:4]:
+        print 'Duplicating '+control
+        cmds.select(control)
+        rig.append(cmds.joint(n=str(control)[:-4]+'RIG'))
+        ik.append(cmds.joint(n=str(control)[:-4]+'ik'))
+        newJointConnection(rig[n], legBones[n])
+        if n == 0:
+            cmds.parent(rig[n], parents[0])
+            cmds.parent(ik[n], parents[0])
+        else:
+            cmds.parent(rig[n], rig[n-1])
+            cmds.parent(ik[n], ik[n-1])
+        if n == 3:
+            ik.append(cmds.joint(n=str(controls[3])[:-4]+'ik_end'))
+            cmds.joint(str(controls[3])[:-4]+'ik_end', e=1, r=1, p=(10,0,0))
+        createSpaceSwitch(1, 1, 1, 0, controls[n], ik[n], rig[n])
+        length = cmds.xform(parents[n+1], q=1, t=1)[0]
+        shape = shapes.cube(color)
+        cmds.parent(shape, controls[n])
+        cmds.xform(shape, t=(length/2,0,0), ro=(0,0,0), s=(length, controlScale*(legControlScaleY[n]), controlScale*(legControlScaleZ[n])))
+        addControlShape(shape, controls[n])
+        n += 1
+    #Build IK Controls
+    #armIk = cmds.ikHandle(sj=ik[0], ee=ik[2], sol='ikRPsolver')
+    #armIk = cmds.rename(armIk[0], controlName+'_ikHandle')
+    #wristIk = cmds.ikHandle(sj=ik[2], ee=ik[3], sol='ikSCsolver')
+    #wristIk = cmds.rename(wristIk[0], controlName[0]+'_wrist_ikHandle')
+    #armIkTrans = cmds.createNode('transform', n=controlName+'_CTRL')
+    #alignAtoB(armIkTrans, controls[2])
+    #cmds.parent(armIkTrans, root)
+    #cmds.makeIdentity(armIkTrans, apply=1)
+    #cmds.parent(armIk, armIkTrans)
+    #cmds.parent(wristIk, armIkTrans)
+    #poleVector = createPoleVector(pv, *ik)
+    #cmds.parent(poleVector, pelvis)
+    #poleVectorShape = shapes.sphere(color)
+    #snapAtoB(poleVectorShape, poleVector)
+    #cmds.xform(poleVectorShape, s=(controlScale, controlScale, controlScale))
+    #addControlShape(poleVectorShape, poleVector)
+    #cmds.poleVectorConstraint(poleVector, armIk)
+    #cmds.addAttr(armIkTrans, ln='twist', at='float', k=1)
+    #cmds.connectAttr(armIkTrans+'.twist', armIk+'.twist')
+    #lockChannels(0, 1, 1, 0, poleVector)
+    #armIkShape = shapes.cube(color)
+    #snapAtoB(armIkShape, armIkTrans)
+    #cmds.xform(armIkShape, s=(controlScale*10, controlScale*10, controlScale*10))
+    #addControlShape(armIkShape, armIkTrans)
+    #cmds.xform(armIkTrans, p=1, roo='xzy' )
+    ##Setup IKFK Attributes
+    #cmds.addAttr(root, ln=attrName+'IK_FK', at='float', k=1, min=0, max=1)
+    #cmds.addAttr(root, ln=attrName+'Template', at='float', k=1, min=0, max=1)
+    #cmds.addAttr(root, ln=attrName+'Visibility', at='float', k=1, min=0, max=1)
+    ##Hook up IK FK
+    #cmds.connectAttr(root+'.'+attrName+'IK_FK', rig[0]+'.spaceBlend')
+    #cmds.connectAttr(root+'.'+attrName+'IK_FK', rig[1]+'.spaceBlend')
+    #cmds.connectAttr(root+'.'+attrName+'IK_FK', rig[2]+'.spaceBlend')
+    ##Hook up Template
+    #templateSwitch = cmds.createNode('multiplyDivide', n=controlName+'_templateSwitch')
+    #cmds.connectAttr(root+'.'+attrName+'IK_FK', templateSwitch+'.input1X')
+    #cmds.connectAttr(root+'.'+attrName+'Template', templateSwitch+'.input2X')
+    #cmds.connectAttr(templateSwitch+'.outputX', parents[0]+'.template')
+    #templateReverse = cmds.createNode('reverse', n=controlName+'_tempateReverse')
+    #cmds.connectAttr(root+'.'+attrName+'IK_FK', templateReverse+'.inputX')
+    #cmds.connectAttr(templateReverse+'.outputX', templateSwitch+'.input1Y')
+    #cmds.connectAttr(root+'.'+attrName+'Template', templateSwitch+'.input2Y')
+    #cmds.connectAttr(templateSwitch+'.outputY', armIkTrans+'.template')
+    #cmds.connectAttr(templateSwitch+'.outputY', poleVector+'.template')
+    ##Hook up Visibility
+    #visIkCondition = cmds.createNode('condition', n=controlName+'_visibilityIkCondition')
+    #cmds.connectAttr(root+'.'+attrName+'IK_FK', visIkCondition+'.firstTerm')
+    #cmds.setAttr(visIkCondition+'.secondTerm', 0.5)
+    #cmds.setAttr(visIkCondition+'.operation', 3)
+    #cmds.setAttr(visIkCondition+'.colorIfTrueR', 1)
+    #cmds.connectAttr(root+'.'+attrName+'Visibility', visIkCondition+'.colorIfFalseR')
+    #cmds.connectAttr(visIkCondition+'.outColorR', armIkTrans+'.visibility')
+    #cmds.connectAttr(visIkCondition+'.outColorR', poleVector+'.visibility')
+    #visFkCondition = cmds.createNode('condition', n=controlName+'_visibilityFkCondition')
+    #cmds.connectAttr(root+'.'+attrName+'IK_FK', visFkCondition+'.firstTerm')
+    #cmds.setAttr(visFkCondition+'.secondTerm', 0.5)
+    #cmds.setAttr(visFkCondition+'.operation', 5)
+    #cmds.setAttr(visFkCondition+'.colorIfTrueR', 1)
+    #cmds.connectAttr(root+'.'+attrName+'Visibility', visFkCondition+'.colorIfFalseR')
+    #cmds.connectAttr(visFkCondition+'.outColorR', parents[0]+'.visibility')
+    ##Create Strechy IK
+    #distance = cmds.createNode('distanceBetween', n=controlName+'_distance')
+    #stretchStart = cmds.createNode('transform', n=controlName+'_stretchStart')
+    #stretchEnd = cmds.createNode('transform', n=controlName+'_stretchEnd')
+    #cmds.pointConstraint(parents[0], stretchStart)
+    #cmds.pointConstraint(armIkTrans, stretchEnd)
+    #cmds.connectAttr(stretchStart+'.translate', distance+'.point1')
+    #cmds.connectAttr(stretchEnd+'.translate', distance+'.point2')
+    #armLen = (cmds.xform(ik[1], q=1, t=1)[0])+(cmds.xform(ik[2], q=1, t=1)[0])
+    #distanceMult = cmds.createNode('multiplyDivide', n=controlName+'_distanceMult')
+    #cmds.setAttr(distanceMult+'.input1X', armLen)
+    #cmds.connectAttr(root+'.scaleY', distanceMult+'.input2X')
+    #distanceDivide = cmds.createNode('multiplyDivide', n=controlName+'_distanceDivide')
+    #cmds.setAttr(distanceDivide+'.operation', 2)
+    #cmds.connectAttr(distance+'.distance', distanceDivide+'.input1X')
+    #cmds.connectAttr(distanceMult+'.outputX', distanceDivide+'.input2X')
+    #stretchCondition = cmds.createNode('condition', n=controlName+'_stretchCondition')
+    #cmds.setAttr(stretchCondition+'.operation', 2)
+    #cmds.connectAttr(distance+'.distance', stretchCondition+'.firstTerm')
+    #cmds.connectAttr(distanceMult+'.outputX', stretchCondition+'.secondTerm')
+    #cmds.connectAttr(distanceDivide+'.outputX', stretchCondition+'.colorIfTrueR')
+    #cmds.addAttr(armIkTrans, ln='stretch', at='float', k=1, min=0, max=1)
+    #stretchBlender = cmds.createNode('blendColors', n=controlName+'_stretchBlender')
+    #cmds.connectAttr(armIkTrans+'.stretch', stretchBlender+'.blender')
+    #cmds.connectAttr(stretchCondition+'.outColorR', stretchBlender+'.color1R')
+    #cmds.connectAttr(stretchBlender+'.outputR', ik[0]+'.scaleX')
+    #cmds.connectAttr(stretchBlender+'.outputR', ik[1]+'.scaleX')
+    #cmds.setAttr(stretchBlender+'.color2R', 1)
+    ##Lock and Hide
+    #lockChannels(1, 1, 1, 0, *rig)
+    #hideChannels(*ik)
+    #hideChannels(armIk, wristIk)
+    #cmds.setAttr(ik[0]+'.visibility', 0)
+    #cmds.setAttr(armIk+'.visibility', 0)
+    #cmds.setAttr(wristIk+'.visibility', 0)
+    #lockChannels(1, 1, 1, 1, *parents)
+    #lockChannels(0, 0, 0, 1, armIkTrans, poleVector)
+    #zeroRadius(*parents)
+
 def createHandRig(controlScale=1, *args):
     wrist = args or cmds.ls(sl=True) or []
     fingers, digitNames = selectFingers(wrist[0])
