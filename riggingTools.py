@@ -374,6 +374,7 @@ def createLegRig(controlScale=1, pv=1, **kwargs):
     controlName = str(str(parents[0])[0]+'_leg')
     attrName = controlName.lower()[0]+'Leg'
     color = limbColor(legBones[0])
+    prefix = limbPrefix(legBones[0])
     root = str(cmds.listRelatives(parents[0], p=1, f=1))
     root = list(root.split('|'))
     root = root[1]
@@ -397,40 +398,52 @@ def createLegRig(controlScale=1, pv=1, **kwargs):
             cmds.parent(ik[n], ik[n-1])
         if n == 3:
             ik.append(cmds.joint(n=str(controls[3])[:-4]+'ik_end'))
-            cmds.joint(str(controls[3])[:-4]+'ik_end', e=1, r=1, p=(10,0,0))
+            cmds.joint(str(controls[n])[:-4]+'ik_end', e=1, r=1, p=(10,0,0))
+            length = legControlScaleY[n]
+        else:
+            length = cmds.xform(parents[n+1], q=1, t=1)[0]
         createSpaceSwitch(1, 1, 1, 0, controls[n], ik[n], rig[n])
-        length = cmds.xform(parents[n+1], q=1, t=1)[0]
         shape = shapes.cube(color)
         cmds.parent(shape, controls[n])
         cmds.xform(shape, t=(length/2,0,0), ro=(0,0,0), s=(length, controlScale*(legControlScaleY[n]), controlScale*(legControlScaleZ[n])))
         addControlShape(shape, controls[n])
         n += 1
     #Build IK Controls
-    #armIk = cmds.ikHandle(sj=ik[0], ee=ik[2], sol='ikRPsolver')
-    #armIk = cmds.rename(armIk[0], controlName+'_ikHandle')
-    #wristIk = cmds.ikHandle(sj=ik[2], ee=ik[3], sol='ikSCsolver')
-    #wristIk = cmds.rename(wristIk[0], controlName[0]+'_wrist_ikHandle')
-    #armIkTrans = cmds.createNode('transform', n=controlName+'_CTRL')
-    #alignAtoB(armIkTrans, controls[2])
-    #cmds.parent(armIkTrans, root)
-    #cmds.makeIdentity(armIkTrans, apply=1)
-    #cmds.parent(armIk, armIkTrans)
-    #cmds.parent(wristIk, armIkTrans)
-    #poleVector = createPoleVector(pv, *ik)
+    legIk = cmds.ikHandle(sj=ik[0], ee=ik[2], sol='ikRPsolver', n=controlName+'_ikHandle')
+    ballIk = cmds.ikHandle(sj=ik[2], ee=ik[3], sol='ikSCsolver', n=controlName[0]+'_ankle_ikHandle')
+    toeIk = cmds.ikHandle(sj=ik[3], ee=ik[4], sol='ikSCsolver', n=controlName[0]+'_ball_ikHandle')
+    revIkTrans = []
+    n = 0
+    for loc in legLoc:
+        revIkTrans.append(cmds.createNode('transform', n=prefix+list(loc.split('_'))[0]))
+        alignAtoB(revIkTrans[n], loc)
+        if n == 0:
+            cmds.parent(revIkTrans[n], root)
+        elif n == 4:
+            cmds.parent(revIkTrans[n], revIkTrans[n-2])
+        else:
+            cmds.parent(revIkTrans[n], revIkTrans[n-1])
+        cmds.makeIdentity(revIkTrans[n], apply=1)
+        n += 1
+    legIkTrans = cmds.rename(revIkTrans[0], prefix+'Foot_CTRL')
+    cmds.parent(legIk, revIkTrans[3])
+    cmds.parent(ballIk, revIkTrans[3])
+    cmds.parent(toeIk, revIkTrans[4])
+    #poleVector = createPoleVector(pv, *ik[:2])
     #cmds.parent(poleVector, pelvis)
     #poleVectorShape = shapes.sphere(color)
     #snapAtoB(poleVectorShape, poleVector)
     #cmds.xform(poleVectorShape, s=(controlScale, controlScale, controlScale))
     #addControlShape(poleVectorShape, poleVector)
-    #cmds.poleVectorConstraint(poleVector, armIk)
-    #cmds.addAttr(armIkTrans, ln='twist', at='float', k=1)
-    #cmds.connectAttr(armIkTrans+'.twist', armIk+'.twist')
+    #cmds.poleVectorConstraint(poleVector, legIk)
+    #cmds.addAttr(legIkTrans, ln='twist', at='float', k=1)
+    #cmds.connectAttr(legIkTrans+'.twist', legIk+'.twist')
     #lockChannels(0, 1, 1, 0, poleVector)
-    #armIkShape = shapes.cube(color)
-    #snapAtoB(armIkShape, armIkTrans)
-    #cmds.xform(armIkShape, s=(controlScale*10, controlScale*10, controlScale*10))
-    #addControlShape(armIkShape, armIkTrans)
-    #cmds.xform(armIkTrans, p=1, roo='xzy' )
+    #legIkShape = shapes.cube(color)
+    #snapAtoB(legIkShape, legIkTrans)
+    #cmds.xform(legIkShape, s=(controlScale*10, controlScale*10, controlScale*10))
+    #addControlShape(legIkShape, legIkTrans)
+    #cmds.xform(legIkTrans, p=1, roo='xzy' )
     ##Setup IKFK Attributes
     #cmds.addAttr(root, ln=attrName+'IK_FK', at='float', k=1, min=0, max=1)
     #cmds.addAttr(root, ln=attrName+'Template', at='float', k=1, min=0, max=1)
@@ -448,7 +461,7 @@ def createLegRig(controlScale=1, pv=1, **kwargs):
     #cmds.connectAttr(root+'.'+attrName+'IK_FK', templateReverse+'.inputX')
     #cmds.connectAttr(templateReverse+'.outputX', templateSwitch+'.input1Y')
     #cmds.connectAttr(root+'.'+attrName+'Template', templateSwitch+'.input2Y')
-    #cmds.connectAttr(templateSwitch+'.outputY', armIkTrans+'.template')
+    #cmds.connectAttr(templateSwitch+'.outputY', legIkTrans+'.template')
     #cmds.connectAttr(templateSwitch+'.outputY', poleVector+'.template')
     ##Hook up Visibility
     #visIkCondition = cmds.createNode('condition', n=controlName+'_visibilityIkCondition')
@@ -457,7 +470,7 @@ def createLegRig(controlScale=1, pv=1, **kwargs):
     #cmds.setAttr(visIkCondition+'.operation', 3)
     #cmds.setAttr(visIkCondition+'.colorIfTrueR', 1)
     #cmds.connectAttr(root+'.'+attrName+'Visibility', visIkCondition+'.colorIfFalseR')
-    #cmds.connectAttr(visIkCondition+'.outColorR', armIkTrans+'.visibility')
+    #cmds.connectAttr(visIkCondition+'.outColorR', legIkTrans+'.visibility')
     #cmds.connectAttr(visIkCondition+'.outColorR', poleVector+'.visibility')
     #visFkCondition = cmds.createNode('condition', n=controlName+'_visibilityFkCondition')
     #cmds.connectAttr(root+'.'+attrName+'IK_FK', visFkCondition+'.firstTerm')
@@ -471,7 +484,7 @@ def createLegRig(controlScale=1, pv=1, **kwargs):
     #stretchStart = cmds.createNode('transform', n=controlName+'_stretchStart')
     #stretchEnd = cmds.createNode('transform', n=controlName+'_stretchEnd')
     #cmds.pointConstraint(parents[0], stretchStart)
-    #cmds.pointConstraint(armIkTrans, stretchEnd)
+    #cmds.pointConstraint(legIkTrans, stretchEnd)
     #cmds.connectAttr(stretchStart+'.translate', distance+'.point1')
     #cmds.connectAttr(stretchEnd+'.translate', distance+'.point2')
     #armLen = (cmds.xform(ik[1], q=1, t=1)[0])+(cmds.xform(ik[2], q=1, t=1)[0])
@@ -487,9 +500,9 @@ def createLegRig(controlScale=1, pv=1, **kwargs):
     #cmds.connectAttr(distance+'.distance', stretchCondition+'.firstTerm')
     #cmds.connectAttr(distanceMult+'.outputX', stretchCondition+'.secondTerm')
     #cmds.connectAttr(distanceDivide+'.outputX', stretchCondition+'.colorIfTrueR')
-    #cmds.addAttr(armIkTrans, ln='stretch', at='float', k=1, min=0, max=1)
+    #cmds.addAttr(legIkTrans, ln='stretch', at='float', k=1, min=0, max=1)
     #stretchBlender = cmds.createNode('blendColors', n=controlName+'_stretchBlender')
-    #cmds.connectAttr(armIkTrans+'.stretch', stretchBlender+'.blender')
+    #cmds.connectAttr(legIkTrans+'.stretch', stretchBlender+'.blender')
     #cmds.connectAttr(stretchCondition+'.outColorR', stretchBlender+'.color1R')
     #cmds.connectAttr(stretchBlender+'.outputR', ik[0]+'.scaleX')
     #cmds.connectAttr(stretchBlender+'.outputR', ik[1]+'.scaleX')
@@ -497,12 +510,12 @@ def createLegRig(controlScale=1, pv=1, **kwargs):
     ##Lock and Hide
     #lockChannels(1, 1, 1, 0, *rig)
     #hideChannels(*ik)
-    #hideChannels(armIk, wristIk)
+    #hideChannels(legIk, ballIk)
     #cmds.setAttr(ik[0]+'.visibility', 0)
-    #cmds.setAttr(armIk+'.visibility', 0)
-    #cmds.setAttr(wristIk+'.visibility', 0)
+    #cmds.setAttr(legIk+'.visibility', 0)
+    #cmds.setAttr(ballIk+'.visibility', 0)
     #lockChannels(1, 1, 1, 1, *parents)
-    #lockChannels(0, 0, 0, 1, armIkTrans, poleVector)
+    #lockChannels(0, 0, 0, 1, legIkTrans, poleVector)
     #zeroRadius(*parents)
 
 def createHandRig(controlScale=1, *args):
@@ -962,11 +975,19 @@ def snapAtoB(*args):
 
 def limbColor(*args):
     bones = args or cmds.ls(sl=1)
-    if str(bones[0]).find('L_'):
+    if cmds.xform(bones[0], q=1, t=1, ws=1)[0] > 0:
         color = 3
     else:
         color = 6
     return color
+
+def limbPrefix(*args):
+    bones = args or cmds.ls(sl=1)
+    if cmds.xform(bones[0], q=1, t=1, ws=1)[0] > 0:
+        prefix = 'L_'
+    else:
+        prefix = 'R_'
+    return prefix
 
 def addControlShape(*args):
     items = args or cmds.ls(sl=1)
