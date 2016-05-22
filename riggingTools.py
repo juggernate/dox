@@ -365,6 +365,13 @@ def createArmRig(controlScale=1, pv=1, *args):
     lockChannels(0, 0, 0, 1, armIkTrans, poleVector)
     zeroRadius(*parents)
 
+def createFootLocators():
+    locatorsNames = ['ankle', 'heel', 'toe', 'ball', 'toeWiggle']
+    locators = []
+    for loc in locatorsNames:
+        locators.append((cmds.spaceLocator(n=loc+'_loc', p=(0, 0, locatorsNames.index(loc)*10)))[0])
+    return locators
+
 def createLegRig(controlScale=1, pv=1, **kwargs):
     legBones = kwargs['legBones']
     legLoc = kwargs['legLoc']
@@ -385,7 +392,6 @@ def createLegRig(controlScale=1, pv=1, **kwargs):
     legControlScaleY = [20, 15, 8, 8]
     legControlScaleZ = [20, 15, 13, 13]
     for control in controls[:4]:
-        print 'Duplicating '+control
         cmds.select(control)
         rig.append(cmds.joint(n=str(control)[:-4]+'RIG'))
         ik.append(cmds.joint(n=str(control)[:-4]+'ik'))
@@ -409,9 +415,9 @@ def createLegRig(controlScale=1, pv=1, **kwargs):
         addControlShape(shape, controls[n])
         n += 1
     #Build IK Controls
-    legIk = cmds.ikHandle(sj=ik[0], ee=ik[2], sol='ikRPsolver', n=controlName+'_ikHandle')
-    ballIk = cmds.ikHandle(sj=ik[2], ee=ik[3], sol='ikSCsolver', n=controlName[0]+'_ankle_ikHandle')
-    toeIk = cmds.ikHandle(sj=ik[3], ee=ik[4], sol='ikSCsolver', n=controlName[0]+'_ball_ikHandle')
+    legIk = cmds.ikHandle(sj=ik[0], ee=ik[2], sol='ikRPsolver', n=controlName[0]+'_ankle_ikHandle')
+    ballIk = cmds.ikHandle(sj=ik[2], ee=ik[3], sol='ikSCsolver', n=controlName[0]+'_ball_ikHandle')
+    toeIk = cmds.ikHandle(sj=ik[3], ee=ik[4], sol='ikSCsolver', n=controlName[0]+'_toe_ikHandle')
     revIkTrans = []
     n = 0
     for loc in legLoc:
@@ -426,29 +432,34 @@ def createLegRig(controlScale=1, pv=1, **kwargs):
         cmds.makeIdentity(revIkTrans[n], apply=1)
         n += 1
     legIkTrans = cmds.rename(revIkTrans[0], prefix+'Foot_CTRL')
-    cmds.parent(legIk, revIkTrans[3])
-    cmds.parent(ballIk, revIkTrans[3])
-    cmds.parent(toeIk, revIkTrans[4])
-    #poleVector = createPoleVector(pv, *ik[:2])
-    #cmds.parent(poleVector, pelvis)
-    #poleVectorShape = shapes.sphere(color)
-    #snapAtoB(poleVectorShape, poleVector)
-    #cmds.xform(poleVectorShape, s=(controlScale, controlScale, controlScale))
-    #addControlShape(poleVectorShape, poleVector)
-    #cmds.poleVectorConstraint(poleVector, legIk)
-    #cmds.addAttr(legIkTrans, ln='twist', at='float', k=1)
-    #cmds.connectAttr(legIkTrans+'.twist', legIk+'.twist')
-    #lockChannels(0, 1, 1, 0, poleVector)
-    #legIkShape = shapes.cube(color)
-    #snapAtoB(legIkShape, legIkTrans)
-    #cmds.xform(legIkShape, s=(controlScale*10, controlScale*10, controlScale*10))
-    #addControlShape(legIkShape, legIkTrans)
-    #cmds.xform(legIkTrans, p=1, roo='xzy' )
-    ##Setup IKFK Attributes
+    cmds.parent(legIk[0], revIkTrans[3])
+    cmds.parent(ballIk[0], revIkTrans[3])
+    cmds.parent(toeIk[0], revIkTrans[4])
+    poleVector = createPoleVector(pv, *ik[:3])
+    cmds.parent(poleVector, root)
+    poleVectorShape = shapes.sphere(color)
+    snapAtoB(poleVectorShape, poleVector)
+    cmds.xform(poleVectorShape, s=(controlScale, controlScale, controlScale))
+    addControlShape(poleVectorShape, poleVector)
+    cmds.poleVectorConstraint(poleVector, legIk[0])
+    cmds.addAttr(legIkTrans, ln='twist', at='float', k=1)
+    cmds.connectAttr(legIkTrans+'.twist', legIk[0]+'.twist')
+    lockChannels(0, 1, 1, 0, poleVector)
+    legIkShape = shapes.cube(color)
+    snapAtoB(legIkShape, legIkTrans)
+    cmds.xform(legIkShape, s=(controlScale*10, controlScale*10, controlScale*10))
+    addControlShape(legIkShape, legIkTrans)
+    cmds.xform(legIkTrans, p=1, roo='xzy' )
+    #Setup IK Roll Attributes
+    #ikAttrNames = [toeLift, ballRoll, ballSwivel, toeWiggle, heelLift]
+    #for name in ikAttrNames:
+    #    cmds.addAttr(legIkTrans, ln=name, at='float', k=1)
+    #    cmds.connectAttr(legIkTrans+'.'+name, revIkTrans[])
+    #Setup IKFK Attributes
     #cmds.addAttr(root, ln=attrName+'IK_FK', at='float', k=1, min=0, max=1)
     #cmds.addAttr(root, ln=attrName+'Template', at='float', k=1, min=0, max=1)
     #cmds.addAttr(root, ln=attrName+'Visibility', at='float', k=1, min=0, max=1)
-    ##Hook up IK FK
+    #Hook up IK FK
     #cmds.connectAttr(root+'.'+attrName+'IK_FK', rig[0]+'.spaceBlend')
     #cmds.connectAttr(root+'.'+attrName+'IK_FK', rig[1]+'.spaceBlend')
     #cmds.connectAttr(root+'.'+attrName+'IK_FK', rig[2]+'.spaceBlend')
@@ -1013,7 +1024,7 @@ def createPoleVector(pv=1, *args):
     armCenter = (boneC-boneA)*0.5
     poleVectorPos = ((boneA+(armCenter*(pv*0.95)))-boneB)
     poleVectorPos = poleVectorPos.normal()*(armCenter.length()*-2)+boneB
-    poleVector = cmds.createNode('transform', n=str(bones[0])[0]+'_arm_pv')
+    poleVector = cmds.createNode('transform', n=str(bones[0])[0]+'_pv')
     cmds.xform(poleVector, t=poleVectorPos)
     cmds.makeIdentity(poleVector, apply=1)
     return poleVector
