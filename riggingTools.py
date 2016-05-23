@@ -372,6 +372,15 @@ def createFootLocators():
         locators.append((cmds.spaceLocator(n=loc+'_loc', p=(0, 0, locatorsNames.index(loc)*10)))[0])
     return locators
 
+def findRoot(*args):
+    root = args or cmds.ls(sl=1)
+    n = 1
+    while n:
+        root = cmds.listRelatives(root, p=1)
+        if not cmds.listRelatives(cmds.listRelatives(root, p=1), p=1):
+            n = 0
+    return root[0]
+
 def createLegRig(controlScale=1, pv=1, **kwargs):
     legBones = kwargs['legBones']
     legLoc = kwargs['legLoc']
@@ -382,9 +391,7 @@ def createLegRig(controlScale=1, pv=1, **kwargs):
     attrName = controlName.lower()[0]+'Leg'
     color = limbColor(legBones[0])
     prefix = limbPrefix(legBones[0])
-    root = str(cmds.listRelatives(parents[0], p=1, f=1))
-    root = list(root.split('|'))
-    root = root[1]
+    root = findRoot(parents[0])
     pelvis = cmds.listRelatives(parents[0], p=1)
     rig = []
     ik = []
@@ -414,6 +421,15 @@ def createLegRig(controlScale=1, pv=1, **kwargs):
         cmds.xform(shape, t=(length/2,0,0), ro=(0,0,0), s=(length, controlScale*(legControlScaleY[n]), controlScale*(legControlScaleZ[n])))
         addControlShape(shape, controls[n])
         n += 1
+    toeParents = cmds.listRelatives(controls[3], type='joint')
+    for toe in toeParents:
+        cmds.parent(toe, rig[3])
+    toeControls = controls[4:]
+    for toe in toeControls:
+        shape = shapes.picker(color)
+        cmds.parent(shape, toe)
+        cmds.xform(shape, t=(0,0,0), ro=(0,-90,0), s=(controlScale, controlScale, controlScale))
+        addControlShape(shape, toe)
     #Build IK Controls
     legIk = cmds.ikHandle(sj=ik[0], ee=ik[2], sol='ikRPsolver', n=controlName[0]+'_ankle_ikHandle')
     ballIk = cmds.ikHandle(sj=ik[2], ee=ik[3], sol='ikSCsolver', n=controlName[0]+'_ball_ikHandle')
@@ -421,7 +437,7 @@ def createLegRig(controlScale=1, pv=1, **kwargs):
     revIkTrans = []
     n = 0
     for loc in legLoc:
-        revIkTrans.append(cmds.createNode('transform', n=prefix+list(loc.split('_'))[0]))
+        revIkTrans.append(cmds.createNode('transform', n=prefix+'rev_'+list(loc.split('_'))[0]))
         alignAtoB(revIkTrans[n], loc)
         if n == 0:
             cmds.parent(revIkTrans[n], root)
@@ -435,6 +451,12 @@ def createLegRig(controlScale=1, pv=1, **kwargs):
     cmds.parent(legIk[0], revIkTrans[3])
     cmds.parent(ballIk[0], revIkTrans[3])
     cmds.parent(toeIk[0], revIkTrans[4])
+    legIkShape = shapes.cube(color)
+    snapAtoB(legIkShape, legIkTrans)
+    cmds.xform(legIkShape, s=(controlScale*10, controlScale*10, controlScale*10))
+    addControlShape(legIkShape, legIkTrans)
+    cmds.xform(legIkTrans, p=1, roo='xzy' )
+    #Pole Vector
     poleVector = createPoleVector(pv, *ik[:3])
     cmds.parent(poleVector, root)
     poleVectorShape = shapes.sphere(color)
@@ -445,89 +467,109 @@ def createLegRig(controlScale=1, pv=1, **kwargs):
     cmds.addAttr(legIkTrans, ln='twist', at='float', k=1)
     cmds.connectAttr(legIkTrans+'.twist', legIk[0]+'.twist')
     lockChannels(0, 1, 1, 0, poleVector)
-    legIkShape = shapes.cube(color)
-    snapAtoB(legIkShape, legIkTrans)
-    cmds.xform(legIkShape, s=(controlScale*10, controlScale*10, controlScale*10))
-    addControlShape(legIkShape, legIkTrans)
-    cmds.xform(legIkTrans, p=1, roo='xzy' )
+    footFollow = cmds.createNode('transform', n=prefix+'Foot_follow')
+    snapAtoB(footFollow, legIkTrans)
+    cmds.makeIdentity(footFollow, apply=1)
+    cmds.pointConstraint(legIkTrans, footFollow)
+    followOri = ['Foot_orient_all', 'Foot_orient_yaw']
+    for ori in followOri:
+        cmds.createNode('transform', n=prefix+ori)
+        snapAtoB(prefix+ori, footFollow)
+        cmds.parent(prefix+ori, footFollow)
+        cmds.makeIdentity(prefix+ori, apply=1)
+        if ori == 'Foot_orient_all':
+            cmds.orientConstraint(legIkTrans, prefix+ori)
+        else:
+            cmds.orientConstraint(legIkTrans, prefix+ori, sk=['x','z'])
+    poleVectorPar = createSpaceSwitch(1, 1, 0, 1, prefix+followOri[0], prefix+followOri[1], poleVector)
+    cmds.addAttr(legIkTrans, ln='poleVectorFollow', at='float', k=1, min=0, max=1)
+    cmds.connectAttr(legIkTrans+'.poleVectorFollow', poleVectorPar+'.spaceBlend')
     #Setup IK Roll Attributes
-    #ikAttrNames = [toeLift, ballRoll, ballSwivel, toeWiggle, heelLift]
-    #for name in ikAttrNames:
-    #    cmds.addAttr(legIkTrans, ln=name, at='float', k=1)
-    #    cmds.connectAttr(legIkTrans+'.'+name, revIkTrans[])
+    ikAttrNames = {
+        'toeLift':'toe.rotateX',
+        'ballRoll':'ball.rotateX',
+        'ballSwivel':'ball.rotateY',
+        'toeWiggle':'toeWiggle.rotateX',
+        'heelLift':'heel.rotateX'}
+    for name in ikAttrNames:
+        cmds.addAttr(legIkTrans, ln=name, at='float', k=1)
+        cmds.connectAttr(legIkTrans+'.'+name, prefix+'rev_'+ikAttrNames[name])
     #Setup IKFK Attributes
-    #cmds.addAttr(root, ln=attrName+'IK_FK', at='float', k=1, min=0, max=1)
-    #cmds.addAttr(root, ln=attrName+'Template', at='float', k=1, min=0, max=1)
-    #cmds.addAttr(root, ln=attrName+'Visibility', at='float', k=1, min=0, max=1)
+    cmds.addAttr(root, ln=attrName+'IK_FK', at='float', k=1, min=0, max=1, dv=1)
+    cmds.addAttr(root, ln=attrName+'Template', at='float', k=1, min=0, max=1)
+    cmds.addAttr(root, ln=attrName+'Visibility', at='float', k=1, min=0, max=1)
     #Hook up IK FK
-    #cmds.connectAttr(root+'.'+attrName+'IK_FK', rig[0]+'.spaceBlend')
-    #cmds.connectAttr(root+'.'+attrName+'IK_FK', rig[1]+'.spaceBlend')
-    #cmds.connectAttr(root+'.'+attrName+'IK_FK', rig[2]+'.spaceBlend')
-    ##Hook up Template
-    #templateSwitch = cmds.createNode('multiplyDivide', n=controlName+'_templateSwitch')
-    #cmds.connectAttr(root+'.'+attrName+'IK_FK', templateSwitch+'.input1X')
-    #cmds.connectAttr(root+'.'+attrName+'Template', templateSwitch+'.input2X')
-    #cmds.connectAttr(templateSwitch+'.outputX', parents[0]+'.template')
-    #templateReverse = cmds.createNode('reverse', n=controlName+'_tempateReverse')
-    #cmds.connectAttr(root+'.'+attrName+'IK_FK', templateReverse+'.inputX')
-    #cmds.connectAttr(templateReverse+'.outputX', templateSwitch+'.input1Y')
-    #cmds.connectAttr(root+'.'+attrName+'Template', templateSwitch+'.input2Y')
-    #cmds.connectAttr(templateSwitch+'.outputY', legIkTrans+'.template')
-    #cmds.connectAttr(templateSwitch+'.outputY', poleVector+'.template')
-    ##Hook up Visibility
-    #visIkCondition = cmds.createNode('condition', n=controlName+'_visibilityIkCondition')
-    #cmds.connectAttr(root+'.'+attrName+'IK_FK', visIkCondition+'.firstTerm')
-    #cmds.setAttr(visIkCondition+'.secondTerm', 0.5)
-    #cmds.setAttr(visIkCondition+'.operation', 3)
-    #cmds.setAttr(visIkCondition+'.colorIfTrueR', 1)
-    #cmds.connectAttr(root+'.'+attrName+'Visibility', visIkCondition+'.colorIfFalseR')
-    #cmds.connectAttr(visIkCondition+'.outColorR', legIkTrans+'.visibility')
-    #cmds.connectAttr(visIkCondition+'.outColorR', poleVector+'.visibility')
-    #visFkCondition = cmds.createNode('condition', n=controlName+'_visibilityFkCondition')
-    #cmds.connectAttr(root+'.'+attrName+'IK_FK', visFkCondition+'.firstTerm')
-    #cmds.setAttr(visFkCondition+'.secondTerm', 0.5)
-    #cmds.setAttr(visFkCondition+'.operation', 5)
-    #cmds.setAttr(visFkCondition+'.colorIfTrueR', 1)
-    #cmds.connectAttr(root+'.'+attrName+'Visibility', visFkCondition+'.colorIfFalseR')
-    #cmds.connectAttr(visFkCondition+'.outColorR', parents[0]+'.visibility')
-    ##Create Strechy IK
-    #distance = cmds.createNode('distanceBetween', n=controlName+'_distance')
-    #stretchStart = cmds.createNode('transform', n=controlName+'_stretchStart')
-    #stretchEnd = cmds.createNode('transform', n=controlName+'_stretchEnd')
-    #cmds.pointConstraint(parents[0], stretchStart)
-    #cmds.pointConstraint(legIkTrans, stretchEnd)
-    #cmds.connectAttr(stretchStart+'.translate', distance+'.point1')
-    #cmds.connectAttr(stretchEnd+'.translate', distance+'.point2')
-    #armLen = (cmds.xform(ik[1], q=1, t=1)[0])+(cmds.xform(ik[2], q=1, t=1)[0])
-    #distanceMult = cmds.createNode('multiplyDivide', n=controlName+'_distanceMult')
-    #cmds.setAttr(distanceMult+'.input1X', armLen)
-    #cmds.connectAttr(root+'.scaleY', distanceMult+'.input2X')
-    #distanceDivide = cmds.createNode('multiplyDivide', n=controlName+'_distanceDivide')
-    #cmds.setAttr(distanceDivide+'.operation', 2)
-    #cmds.connectAttr(distance+'.distance', distanceDivide+'.input1X')
-    #cmds.connectAttr(distanceMult+'.outputX', distanceDivide+'.input2X')
-    #stretchCondition = cmds.createNode('condition', n=controlName+'_stretchCondition')
-    #cmds.setAttr(stretchCondition+'.operation', 2)
-    #cmds.connectAttr(distance+'.distance', stretchCondition+'.firstTerm')
-    #cmds.connectAttr(distanceMult+'.outputX', stretchCondition+'.secondTerm')
-    #cmds.connectAttr(distanceDivide+'.outputX', stretchCondition+'.colorIfTrueR')
-    #cmds.addAttr(legIkTrans, ln='stretch', at='float', k=1, min=0, max=1)
-    #stretchBlender = cmds.createNode('blendColors', n=controlName+'_stretchBlender')
-    #cmds.connectAttr(legIkTrans+'.stretch', stretchBlender+'.blender')
-    #cmds.connectAttr(stretchCondition+'.outColorR', stretchBlender+'.color1R')
-    #cmds.connectAttr(stretchBlender+'.outputR', ik[0]+'.scaleX')
-    #cmds.connectAttr(stretchBlender+'.outputR', ik[1]+'.scaleX')
-    #cmds.setAttr(stretchBlender+'.color2R', 1)
-    ##Lock and Hide
-    #lockChannels(1, 1, 1, 0, *rig)
-    #hideChannels(*ik)
-    #hideChannels(legIk, ballIk)
-    #cmds.setAttr(ik[0]+'.visibility', 0)
-    #cmds.setAttr(legIk+'.visibility', 0)
-    #cmds.setAttr(ballIk+'.visibility', 0)
-    #lockChannels(1, 1, 1, 1, *parents)
-    #lockChannels(0, 0, 0, 1, legIkTrans, poleVector)
-    #zeroRadius(*parents)
+    n = 0
+    for bone in rig:
+        cmds.connectAttr(root+'.'+attrName+'IK_FK', rig[n]+'.spaceBlend')
+        n += 1
+    #Hook up Template
+    templateSwitch = cmds.createNode('multiplyDivide', n=controlName+'_templateSwitch')
+    cmds.connectAttr(root+'.'+attrName+'IK_FK', templateSwitch+'.input1X')
+    cmds.connectAttr(root+'.'+attrName+'Template', templateSwitch+'.input2X')
+    cmds.connectAttr(templateSwitch+'.outputX', parents[0]+'.template')
+    templateReverse = cmds.createNode('reverse', n=controlName+'_tempateReverse')
+    cmds.connectAttr(root+'.'+attrName+'IK_FK', templateReverse+'.inputX')
+    cmds.connectAttr(templateReverse+'.outputX', templateSwitch+'.input1Y')
+    cmds.connectAttr(root+'.'+attrName+'Template', templateSwitch+'.input2Y')
+    cmds.connectAttr(templateSwitch+'.outputY', legIkTrans+'.template')
+    cmds.connectAttr(templateSwitch+'.outputY', poleVector+'.template')
+    #Hook up Visibility
+    visIkCondition = cmds.createNode('condition', n=controlName+'_visibilityIkCondition')
+    cmds.connectAttr(root+'.'+attrName+'IK_FK', visIkCondition+'.firstTerm')
+    cmds.setAttr(visIkCondition+'.secondTerm', 0.5)
+    cmds.setAttr(visIkCondition+'.operation', 3)
+    cmds.setAttr(visIkCondition+'.colorIfTrueR', 1)
+    cmds.connectAttr(root+'.'+attrName+'Visibility', visIkCondition+'.colorIfFalseR')
+    cmds.connectAttr(visIkCondition+'.outColorR', legIkTrans+'.visibility')
+    cmds.connectAttr(visIkCondition+'.outColorR', poleVector+'.visibility')
+    visFkCondition = cmds.createNode('condition', n=controlName+'_visibilityFkCondition')
+    cmds.connectAttr(root+'.'+attrName+'IK_FK', visFkCondition+'.firstTerm')
+    cmds.setAttr(visFkCondition+'.secondTerm', 0.5)
+    cmds.setAttr(visFkCondition+'.operation', 5)
+    cmds.setAttr(visFkCondition+'.colorIfTrueR', 1)
+    cmds.connectAttr(root+'.'+attrName+'Visibility', visFkCondition+'.colorIfFalseR')
+    cmds.connectAttr(visFkCondition+'.outColorR', controls[0]+'.visibility')
+    #Create Strechy IK
+    distance = cmds.createNode('distanceBetween', n=controlName+'_distance')
+    stretchStart = cmds.createNode('transform', n=controlName+'_stretchStart')
+    stretchEnd = cmds.createNode('transform', n=controlName+'_stretchEnd')
+    cmds.pointConstraint(parents[0], stretchStart)
+    cmds.pointConstraint(legIkTrans, stretchEnd)
+    cmds.connectAttr(stretchStart+'.translate', distance+'.point1')
+    cmds.connectAttr(stretchEnd+'.translate', distance+'.point2')
+    legLen = (cmds.xform(ik[1], q=1, t=1)[0])+(cmds.xform(ik[2], q=1, t=1)[0])
+    distanceMult = cmds.createNode('multiplyDivide', n=controlName+'_distanceMult')
+    cmds.setAttr(distanceMult+'.input1X', legLen)
+    cmds.connectAttr(root+'.scaleY', distanceMult+'.input2X')
+    distanceDivide = cmds.createNode('multiplyDivide', n=controlName+'_distanceDivide')
+    cmds.setAttr(distanceDivide+'.operation', 2)
+    cmds.connectAttr(distance+'.distance', distanceDivide+'.input1X')
+    cmds.connectAttr(distanceMult+'.outputX', distanceDivide+'.input2X')
+    stretchCondition = cmds.createNode('condition', n=controlName+'_stretchCondition')
+    cmds.setAttr(stretchCondition+'.operation', 2)
+    cmds.connectAttr(distance+'.distance', stretchCondition+'.firstTerm')
+    cmds.connectAttr(distanceMult+'.outputX', stretchCondition+'.secondTerm')
+    cmds.connectAttr(distanceDivide+'.outputX', stretchCondition+'.colorIfTrueR')
+    cmds.addAttr(legIkTrans, ln='stretch', at='float', k=1, min=0, max=1)
+    stretchBlender = cmds.createNode('blendColors', n=controlName+'_stretchBlender')
+    cmds.connectAttr(legIkTrans+'.stretch', stretchBlender+'.blender')
+    cmds.connectAttr(stretchCondition+'.outColorR', stretchBlender+'.color1R')
+    cmds.connectAttr(stretchBlender+'.outputR', ik[0]+'.scaleX')
+    cmds.connectAttr(stretchBlender+'.outputR', ik[1]+'.scaleX')
+    cmds.setAttr(stretchBlender+'.color2R', 1)
+    #Lock and Hide
+    lockChannels(1, 1, 1, 0, *rig)
+    hideChannels(*ik)
+    hideChannels(legIk[0], ballIk[0], toeIk[0])
+    cmds.setAttr(ik[0]+'.visibility', 0)
+    cmds.setAttr(legIk[0]+'.visibility', 0)
+    cmds.setAttr(ballIk[0]+'.visibility', 0)
+    cmds.setAttr(toeIk[0]+'.visibility', 0)
+    lockChannels(1, 1, 1, 1, *parents)
+    lockChannels(0, 0, 0, 1, legIkTrans, poleVector)
+    zeroRadius(*parents)
+    cmds.delete(*legLoc)
 
 def createHandRig(controlScale=1, *args):
     wrist = args or cmds.ls(sl=True) or []
