@@ -3,6 +3,7 @@
 import maya.cmds as cmds
 import dox.shapes as shapes
 import maya.api.OpenMaya as om
+import math
 from dox.ui import dox_OptionsWindow
 
 class armRigger(dox_OptionsWindow):
@@ -89,7 +90,7 @@ class armRigger(dox_OptionsWindow):
             text='None',
             w=250
         )
-        self.clavicleButton = cmds.button(
+        self.wristButton = cmds.button(
             label='add', w=50,
             c=self.addWristCmd
         )
@@ -174,6 +175,202 @@ class armRigger(dox_OptionsWindow):
             createHandRig(scale,wristBone)
         cmds.select(cl=1)
 
+class legRigger(dox_OptionsWindow):
+    def __init__(self):
+        dox_OptionsWindow.__init__(self)
+        self.title = 'Dox Leg Rigging Tool'
+        self.actionName = 'Create'
+    def displayOptions(self):
+        cmds.columnLayout()
+        cmds.separator(height=5)
+        self.objType = cmds.button(
+            label='Create Foot Locators',
+            w=120, c=self.addLocatorsCmd
+        )
+        cmds.separator(height=10)
+        self.xformGrp = cmds.frameLayout(
+            label='Skinned Bones to Rig',
+            collapsable=True,
+            w=415
+        )
+        self.xformCol = cmds.rowColumnLayout(nc=3)
+        self.hipLabel = cmds.textField(
+            annotation='Hip Bone',
+            text='Hip Bone',
+            bgc=[0.1,0.06,0.06],
+            editable=0,
+            w=115
+        )
+        self.hipText = cmds.textField(
+            annotation='Hip Bone',
+            text='None',
+            w=250
+        )
+        self.hipButton = cmds.button(
+            label='add', w=50,
+            c=self.addHipCmd
+        )
+        self.kneeLabel = cmds.textField(
+            annotation='Knee Bone',
+            text='Knee Bone',
+            bgc=[0.1,0.06,0.06],
+            editable=0,
+            w=115
+        )
+        self.kneeText = cmds.textField(
+            annotation='Knee Bone',
+            text='None',
+            w=250
+        )
+        self.kneeButton = cmds.button(
+            label='add', w=50,
+            c=self.addKneeCmd
+        )
+        self.ankleLabel = cmds.textField(
+            annotation='Ankle Bone',
+            text='Ankle Bone',
+            bgc=[0.1,0.06,0.06],
+            editable=0,
+            w=115
+        )
+        self.ankleText = cmds.textField(
+            annotation='Ankle Bone',
+            text='None',
+            w=250
+        )
+        self.ankleButton = cmds.button(
+            label='add', w=50,
+            c=self.addAnkleCmd
+        )
+        self.ballLabel = cmds.textField(
+            annotation='Ball Bone',
+            text='Ball Bone',
+            bgc=[0.1,0.06,0.06],
+            editable=0,
+            w=115
+        )
+        self.ballText = cmds.textField(
+            annotation='Ball Bone',
+            text='None',
+            w=250
+        )
+        self.ballButton = cmds.button(
+            label='add', w=50,
+            c=self.addBallCmd
+        )
+        self.toesLabel = cmds.textField(
+            annotation='Toes Bone',
+            text='Toes Bone',
+            bgc=[0.1,0.06,0.06],
+            editable=0,
+            w=115
+        )
+        self.toesText = cmds.textField(
+            annotation='Toes Bone',
+            text='None',
+            w=250
+        )
+        self.toesButton = cmds.button(
+            label='add', w=50,
+            c=self.addToesCmd
+        )
+        cmds.setParent('..')
+        cmds.setParent('..')
+        self.attrGrp = cmds.frameLayout(
+            label='Rig Attributes',
+            collapsable=True,
+            w=415
+        )
+        self.xformCol = cmds.rowColumnLayout(nc=2)
+        self.scaleLabel = cmds.textField(
+            annotation='The scale of the shape object used to select the rig.',
+            text='Control Scale',
+            bgc=[0.06,0.06,0.1],
+            editable=0,
+            w=115
+        )
+        self.scaleAttr = cmds.floatField(
+            v=1, min=0, max=10
+        )
+        self.poleLabel = cmds.textField(
+            annotation='A scalar value to adjust the angle of the pole vector. Smaller numbers push the point out.',
+            text='Pole Vector Position',
+            bgc=[0.06,0.06,0.1],
+            editable=0,
+            w=115
+        )
+        self.poleAttr = cmds.floatField(
+            v=1, min=0, max=2
+        )
+    def addLocatorsCmd(self, *args):
+        self.locators = createFootLocators()
+    def addHipCmd(self, *args):
+        cmds.textField(self.hipText, e=1, text=str(cmds.ls(sl=1, type='joint', hd=1))[3:-2] or 'None')
+    def addKneeCmd(self, *args):
+        cmds.textField(self.kneeText, e=1, text=str(cmds.ls(sl=1, type='joint', hd=1))[3:-2] or 'None')
+    def addAnkleCmd(self, *args):
+        cmds.textField(self.ankleText, e=1, text=str(cmds.ls(sl=1, type='joint', hd=1))[3:-2] or 'None')
+    def addBallCmd(self, *args):
+        cmds.textField(self.ballText, e=1, text=str(cmds.ls(sl=1, type='joint', hd=1))[3:-2] or 'None')
+    def addToesCmd(self, *args):
+        toes = cmds.ls(sl=1, type='joint')
+        toesString = ', '.join(toes)
+        cmds.textField(self.toesText, e=1, text=toesString or 'None')
+    def applyBtnCmd(self, *args):
+        hipBone = cmds.textField(
+            self.hipText, q=1,
+            text=1
+        )
+        kneeBone = cmds.textField(
+            self.kneeText, q=1,
+            text=1
+        )
+        ankleBone = cmds.textField(
+            self.ankleText, q=1,
+            text=1
+        )
+        ballBone = cmds.textField(
+            self.ballText, q=1,
+            text=1
+        )
+        toeBones = cmds.textField(
+            self.toesText, q=1,
+            text=1
+        )
+        toeBones = toeBones.split(', ')
+        scale = cmds.floatField(
+            self.scaleAttr, q=1,
+            v=1
+        )
+        poleVector = cmds.floatField(
+            self.poleAttr, q=1,
+            v=1
+        )
+        leg = [hipBone, kneeBone, ankleBone, ballBone]
+        if not toeBones[0] == 'None':
+            for toe in toeBones:
+                leg.append(toe)
+        print leg
+        createLegRig(scale,poleVector,legBones=leg,legLoc=self.locators)
+        cmds.select(cl=1)
+
+def createRootRig(controlScale=1, name='Character', *args):
+    pelvis = args[0] or cmds.ls(sl=1)[0] or []
+    pelvisControl, pelvisParent = createControlJoint(pelvis)
+    bodyControl = createParent(pelvisControl[0])
+    bodyControl = cmds.rename(bodyControl, 'Body_CTRL')
+    pelvisParent[0] = cmds.rename(pelvisParent[0], 'Body_grp')
+    root = cmds.createNode('transform', n='Root_CTRL')
+    cmds.parent(pelvisParent[0], root)
+    controls = {root:'shapes.circleArrow(1)', pelvisControl[0]:'shapes.pelvis(7)', bodyControl:'shapes.body(2)'}
+    for control in controls:
+        shape = eval(controls[control])
+        snapAtoB(shape, control)
+        cmds.xform(shape, s=(controlScale, controlScale, controlScale))
+        addControlShape(shape, control)
+    topGroup = cmds.createNode('transform', n=name)
+    cmds.parent(root, pelvis, topGroup)
+
 def createClavicleRig(controlScale=1, *args):
     skinBones = args or cmds.ls(sl=True) or []
     color = limbColor(skinBones[0])
@@ -214,13 +411,12 @@ def createArmRig(controlScale=1, pv=1, *args):
     armBones = args or cmds.ls(sl=True) or []
     #Build RIG, FK and IK bone setups
     controls, parents = createControlJoint(*armBones)
+    prefix = limbPrefix(armBones[0])
+    root = findRoot(parents[0])
     controlBase = [str(controls[0])[:-5], str(controls[1])[:-5], str(controls[2])[:-5]]
-    controlName = str(str(parents[0])[0]+'_arm')
-    attrName = controlName.lower()[0]+'Arm'
+    controlName = prefix+'_arm'
+    attrName = prefix.lower()+'_arm'
     color = limbColor(armBones[0])
-    root = str(cmds.listRelatives(parents[0], p=1, f=1))
-    root = list(root.split('|'))
-    root = root[1]
     chest = cmds.listRelatives(parents[0], p=1)
     clavSpace = False
     if str(chest).find('clav') > -1:
@@ -369,7 +565,8 @@ def createFootLocators():
     locatorsNames = ['ankle', 'heel', 'toe', 'ball', 'toeWiggle']
     locators = []
     for loc in locatorsNames:
-        locators.append((cmds.spaceLocator(n=loc+'_loc', p=(0, 0, locatorsNames.index(loc)*10)))[0])
+        locators.append(cmds.spaceLocator(n=loc+'_loc')[0])
+        cmds.xform(locators[locatorsNames.index(loc)], t=(0, 0, locatorsNames.index(loc)*10))
     return locators
 
 def findRoot(*args):
@@ -411,7 +608,10 @@ def createLegRig(controlScale=1, pv=1, **kwargs):
             cmds.parent(ik[n], ik[n-1])
         if n == 3:
             ik.append(cmds.joint(n=str(controls[3])[:-4]+'ik_end'))
-            cmds.joint(str(controls[n])[:-4]+'ik_end', e=1, r=1, p=(10,0,0))
+            if color == 3:
+                cmds.joint(str(controls[n])[:-4]+'ik_end', e=1, r=1, p=(10,0,0))
+            else:
+                cmds.joint(str(controls[n])[:-4]+'ik_end', e=1, r=1, p=(-10,0,0))
             length = legControlScaleY[n]
         else:
             length = cmds.xform(parents[n+1], q=1, t=1)[0]
@@ -422,13 +622,17 @@ def createLegRig(controlScale=1, pv=1, **kwargs):
         addControlShape(shape, controls[n])
         n += 1
     toeParents = cmds.listRelatives(controls[3], type='joint')
-    for toe in toeParents:
-        cmds.parent(toe, rig[3])
+    if toeParents:
+        for toe in toeParents:
+            cmds.parent(toe, rig[3])
     toeControls = controls[4:]
     for toe in toeControls:
         shape = shapes.picker(color)
         cmds.parent(shape, toe)
-        cmds.xform(shape, t=(0,0,0), ro=(0,-90,0), s=(controlScale, controlScale, controlScale))
+        if color == 3:
+            cmds.xform(shape, t=(0,0,0), ro=(180,-90,0), s=(controlScale, controlScale, controlScale))
+        else:
+            cmds.xform(shape, t=(0,0,0), ro=(0,-90,0), s=(controlScale, controlScale, controlScale))
         addControlShape(shape, toe)
     #Build IK Controls
     legIk = cmds.ikHandle(sj=ik[0], ee=ik[2], sol='ikRPsolver', n=controlName[0]+'_ankle_ikHandle')
@@ -451,9 +655,11 @@ def createLegRig(controlScale=1, pv=1, **kwargs):
     cmds.parent(legIk[0], revIkTrans[3])
     cmds.parent(ballIk[0], revIkTrans[3])
     cmds.parent(toeIk[0], revIkTrans[4])
-    legIkShape = shapes.cube(color)
+    legIkShape = shapes.foot(color)
     snapAtoB(legIkShape, legIkTrans)
-    cmds.xform(legIkShape, s=(controlScale*10, controlScale*10, controlScale*10))
+    footLength = abs(cmds.xform(legLoc[1], q=1, t=1)[2])+abs(cmds.xform(legLoc[2], q=1, t=1)[2])
+    footOffset = abs(cmds.xform(legLoc[1], q=1, t=1)[2])-abs(cmds.xform(legLoc[0], q=1, t=1)[2])
+    cmds.xform(legIkShape, r=1, t=(0,cmds.xform(legLoc[0], q=1, t=1)[1]*-1,(footLength/2)-footOffset), s=(controlScale*(footLength/2), 1.2*cmds.xform(legLoc[0], q=1, t=1)[1], controlScale*footLength))
     addControlShape(legIkShape, legIkTrans)
     cmds.xform(legIkTrans, p=1, roo='xzy' )
     #Pole Vector
@@ -1036,10 +1242,7 @@ def limbColor(*args):
 
 def limbPrefix(*args):
     bones = args or cmds.ls(sl=1)
-    if cmds.xform(bones[0], q=1, t=1, ws=1)[0] > 0:
-        prefix = 'L_'
-    else:
-        prefix = 'R_'
+    prefix = bones[0].split('_')[0]
     return prefix
 
 def addControlShape(*args):
@@ -1063,9 +1266,15 @@ def createPoleVector(pv=1, *args):
     boneA = om.MVector(cmds.xform(bones[0], q=1, t=1, ws=1))
     boneB = om.MVector(cmds.xform(bones[1], q=1, t=1, ws=1))
     boneC = om.MVector(cmds.xform(bones[2], q=1, t=1, ws=1))
-    armCenter = (boneC-boneA)*0.5
-    poleVectorPos = ((boneA+(armCenter*(pv*0.95)))-boneB)
-    poleVectorPos = poleVectorPos.normal()*(armCenter.length()*-2)+boneB
+    armDir = (boneC-boneA)
+    upArm = (boneB-boneA)
+    loArm = (boneC-boneB)
+    armLength = upArm.length()+loArm.length()
+    boneAAngle = armDir.angle(upArm)
+    rAngleLen = math.cos(boneAAngle)*upArm.length()*pv
+    rAnglePos = boneA+(armDir.normal()*rAngleLen)
+    poleVectorDir = boneB-rAnglePos
+    poleVectorPos = rAnglePos+poleVectorDir.normal()*armLength
     poleVector = cmds.createNode('transform', n=str(bones[0])[0]+'_pv')
     cmds.xform(poleVector, t=poleVectorPos)
     cmds.makeIdentity(poleVector, apply=1)
