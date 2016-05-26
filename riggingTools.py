@@ -1345,5 +1345,9 @@ def createPoleVector(pv=1, name='limb', *args):
     poleVectorPos = rAnglePos+poleVectorDir.normal()*armLength
     poleVector = cmds.createNode('transform', n=name+'_pv')
     cmds.xform(poleVector, t=poleVectorPos)
-    #cmds.makeIdentity(poleVector, apply=1)
     return poleVector
+
+def createSpineClusters(*args):
+    spline = args or cmds.ls(sl=1)
+    splineShape = cmds.listRelatives(spline, s=1)
+    print splineShape
