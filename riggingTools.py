@@ -350,8 +350,71 @@ class legRigger(dox_OptionsWindow):
         if not toeBones[0] == 'None':
             for toe in toeBones:
                 leg.append(toe)
-        print leg
         createLegRig(scale,poleVector,legBones=leg,legLoc=self.locators)
+        cmds.select(cl=1)
+
+class rootRigger(dox_OptionsWindow):
+    def __init__(self):
+        dox_OptionsWindow.__init__(self)
+        self.title = 'Dox Root Rigging Tool'
+        self.actionName = 'Create'
+    def displayOptions(self):
+        self.xformCol = cmds.rowColumnLayout(nc=3)
+        self.nameLabel = cmds.textField(
+            annotation='Character Name',
+            text='Character Name',
+            bgc=[0.1,0.06,0.06],
+            editable=0,
+            w=115
+        )
+        self.nameText = cmds.textField(
+            annotation='Character Name',
+            text='Character',
+            w=250
+        )
+        cmds.separator()
+        self.pelvisLabel = cmds.textField(
+            annotation='Pelvis Bone',
+            text='Pelvis Bone',
+            bgc=[0.1,0.06,0.06],
+            editable=0,
+            w=115
+        )
+        self.pelvisText = cmds.textField(
+            annotation='Pelvis Bone',
+            text='None',
+            w=250
+        )
+        self.pelvisButton = cmds.button(
+            label='add', w=50,
+            c=self.addPelvisCmd
+        )
+        self.scaleLabel = cmds.textField(
+            annotation='The scale of the shape object used to select the rig.',
+            text='Control Scale',
+            bgc=[0.06,0.06,0.1],
+            editable=0,
+            w=115
+        )
+        self.scaleAttr = cmds.floatField(
+            v=1, min=0, max=10
+        )
+    def addPelvisCmd(self, *args):
+        cmds.textField(self.pelvisText, e=1, text=str(cmds.ls(sl=1, type='joint', hd=1))[3:-2] or 'None')
+    def applyBtnCmd(self, *args):
+        name = cmds.textField(
+            self.nameText, q=1,
+            text=1
+        )
+        pelvisBone = cmds.textField(
+            self.pelvisText, q=1,
+            text=1
+        )
+        scale = cmds.floatField(
+            self.scaleAttr, q=1,
+            v=1
+        )
+        createRootRig(scale,name,pelvisBone)
         cmds.select(cl=1)
 
 def createRootRig(controlScale=1, name='Character', *args):
@@ -419,7 +482,7 @@ def createArmRig(controlScale=1, pv=1, *args):
     color = limbColor(armBones[0])
     chest = cmds.listRelatives(parents[0], p=1)
     clavSpace = False
-    if str(chest).find('clav') > -1:
+    if str(str(chest).lower()).find('clav') > -1:
         chest = cmds.listRelatives(chest, p=1)
         clavSpace = True
     for control in controls:
@@ -435,7 +498,10 @@ def createArmRig(controlScale=1, pv=1, *args):
     cmds.parent(ik[2], ik[1])
     cmds.parent(ik[1], ik[0])
     cmds.parent(ik[0], parents[0])
-    cmds.joint(ik[3], e=1, r=1, p=(10,0,0))
+    if color == 3:
+        cmds.joint(ik[3], e=1, r=1, p=(10,0,0))
+    else:
+        cmds.joint(ik[3], e=1, r=1, p=(-10,0,0))
     newJointConnection(rig[0], armBones[0])
     newJointConnection(rig[1], armBones[1])
     newJointConnection(rig[2], armBones[2])
@@ -469,8 +535,9 @@ def createArmRig(controlScale=1, pv=1, *args):
     cmds.makeIdentity(armIkTrans, apply=1)
     cmds.parent(armIk, armIkTrans)
     cmds.parent(wristIk, armIkTrans)
-    poleVector = createPoleVector(pv, *ik)
+    poleVector = createPoleVector(pv, controlName, ik[0], ik[1], ik[2])
     cmds.parent(poleVector, chest)
+    cmds.makeIdentity(poleVector, apply=1)
     poleVectorShape = shapes.sphere(color)
     snapAtoB(poleVectorShape, poleVector)
     cmds.xform(poleVectorShape, s=(controlScale, controlScale, controlScale))
@@ -610,9 +677,10 @@ def createLegRig(controlScale=1, pv=1, **kwargs):
             ik.append(cmds.joint(n=str(controls[3])[:-4]+'ik_end'))
             if color == 3:
                 cmds.joint(str(controls[n])[:-4]+'ik_end', e=1, r=1, p=(10,0,0))
+                length = legControlScaleY[n]
             else:
                 cmds.joint(str(controls[n])[:-4]+'ik_end', e=1, r=1, p=(-10,0,0))
-            length = legControlScaleY[n]
+                length = legControlScaleY[n]*-1
         else:
             length = cmds.xform(parents[n+1], q=1, t=1)[0]
         createSpaceSwitch(1, 1, 1, 0, controls[n], ik[n], rig[n])
@@ -663,7 +731,7 @@ def createLegRig(controlScale=1, pv=1, **kwargs):
     addControlShape(legIkShape, legIkTrans)
     cmds.xform(legIkTrans, p=1, roo='xzy' )
     #Pole Vector
-    poleVector = createPoleVector(pv, *ik[:3])
+    poleVector = createPoleVector(pv, controlName, *ik[:3])
     cmds.parent(poleVector, root)
     poleVectorShape = shapes.sphere(color)
     snapAtoB(poleVectorShape, poleVector)
@@ -673,8 +741,9 @@ def createLegRig(controlScale=1, pv=1, **kwargs):
     cmds.addAttr(legIkTrans, ln='twist', at='float', k=1)
     cmds.connectAttr(legIkTrans+'.twist', legIk[0]+'.twist')
     lockChannels(0, 1, 1, 0, poleVector)
-    footFollow = cmds.createNode('transform', n=prefix+'Foot_follow')
+    footFollow = cmds.createNode('transform', n=prefix+'_Foot_follow')
     snapAtoB(footFollow, legIkTrans)
+    cmds.parent(footFollow, root)
     cmds.makeIdentity(footFollow, apply=1)
     cmds.pointConstraint(legIkTrans, footFollow)
     followOri = ['Foot_orient_all', 'Foot_orient_yaw']
@@ -786,10 +855,10 @@ def createHandRig(controlScale=1, *args):
         controls, parents = createControlJoint(*finger)
         fingerControls.append(controls)
         fingerParents.append(parents)
-    root = str(cmds.listRelatives(wrist, p=1, f=1))
-    root = list(root.split('|'))[1]
+    root = findRoot(fingerParents[0][0])
     wristFollow = cmds.createNode('transform', n=wrist[0]+'_follow')
     snapAtoB(wristFollow, wrist)
+    cmds.parent(wristFollow, root)
     cmds.makeIdentity(wristFollow, apply=1)
     n = 0
     while len(fingerControls) > n:
@@ -827,13 +896,12 @@ def fingerSetup(controlScale=1, *args):
     wristFollow = args[0]
     fingerControls = args[2]
     fingerParents = args[1]
-    print fingerControls
-    color = limbColor(wristFollow)
-    if len(fingerParents) == 4 or str(fingerParents[0]).find('thumb') > -1:
+    color = limbColor(fingerControls[0])
+    if len(fingerParents) == 4 or str(str(fingerParents[0]).lower()).find('thumb') > -1:
         knuckle = fingerControls[1]
     else:
         knuckle = fingerControls[0]
-    if color == 6:
+    if color == 3:
         dirMod = [1,-1]
     else:
         dirMod = [0,1]
@@ -849,7 +917,7 @@ def fingerSetup(controlScale=1, *args):
     cmds.addAttr(fingerControl, ln='twist', at='float', k=1)
     #Connect Attributes
     n = 0
-    if str(fingerParents[0]).find('thumb') > -1:
+    if str(str(fingerParents[0]).lower()).find('thumb') > -1:
         cmds.connectAttr(fingerControl+'.spread', fingerParents[0+n]+'.rotateY')
     else:
         spreadMult = cmds.createNode('multiplyDivide', n=str(fingerParents[0])[:-5]+'spreadMult')
@@ -882,7 +950,7 @@ def fingerSetup(controlScale=1, *args):
     cmds.xform(fingerControlShape, ro=(180*dirMod[0],-90,0), t=(0,1*controlScale*dirMod[1],0), s=(controlScale, controlScale, controlScale))
     addControlShape(fingerControlShape, fingerControl)
     #Metacarpal
-    if len(fingerControls) == 4 or str(fingerParents[0]).find('thumb') > -1:
+    if len(fingerControls) == 4 or str(str(fingerParents[0]).lower()).find('thumb') > -1:
         metacarpalSetup(fingerControls, fingerParents, fingerControl)
         lockChannels(0, 1, 1, 0, fingerControl)
     else:
@@ -1261,7 +1329,7 @@ def findSkinnedBones(*skinMesh):
     cmds.select(skinBones)
     return(skinBones)
 
-def createPoleVector(pv=1, *args):
+def createPoleVector(pv=1, name='limb', *args):
     bones = args or cmds.ls(sl=True) or []
     boneA = om.MVector(cmds.xform(bones[0], q=1, t=1, ws=1))
     boneB = om.MVector(cmds.xform(bones[1], q=1, t=1, ws=1))
@@ -1275,7 +1343,7 @@ def createPoleVector(pv=1, *args):
     rAnglePos = boneA+(armDir.normal()*rAngleLen)
     poleVectorDir = boneB-rAnglePos
     poleVectorPos = rAnglePos+poleVectorDir.normal()*armLength
-    poleVector = cmds.createNode('transform', n=str(bones[0])[0]+'_pv')
+    poleVector = cmds.createNode('transform', n=name+'_pv')
     cmds.xform(poleVector, t=poleVectorPos)
-    cmds.makeIdentity(poleVector, apply=1)
+    #cmds.makeIdentity(poleVector, apply=1)
     return poleVector
