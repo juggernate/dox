@@ -1148,14 +1148,21 @@ def createParent(*childeren):
             n += 1
         return newParents
 
-def createControlJoint(*args):
+def createControlJoint(*args, **kwargs):
     args = args or cmds.ls(sl=True) or []
+    if kwargs:
+        par = kwargs['par']
+    else:
+        par = True
     ctrlBones = []
     ctrlParents = []
     for bone in args:
         cmds.select(cl=1)
         unlockChannels(bone)
-        ctrlBone = cmds.joint(n=bone+'_CTRL')
+        if par:
+            ctrlBone = cmds.joint(n=bone+'_CTRL')
+        else:
+            ctrlBone = cmds.joint(n=bone+'_ik')
         ctrlBones.append(ctrlBone)
         alignAtoB(ctrlBone, bone)
         #look for rig parent
@@ -1178,7 +1185,7 @@ def createControlJoint(*args):
         #check for offset
         trans = cmds.xform(ctrlBone, q=1, os=1, t=1)
         rot = cmds.xform(ctrlBone, q=1, os=1, ro=1)
-        if (abs(trans[0])+abs(trans[1])+abs(trans[2])+abs(rot[0])+abs(rot[1])+abs(rot[2]) > 0.0001):
+        if (abs(trans[0])+abs(trans[1])+abs(trans[2])+abs(rot[0])+abs(rot[1])+abs(rot[2]) > 0.0001) and par:
             ctrlBoneGrp = cmds.joint(n=bone+'_grp')
             ctrlParents.append(ctrlBoneGrp)
             alignAtoB(ctrlBoneGrp, ctrlBone)
@@ -1188,6 +1195,8 @@ def createControlJoint(*args):
                 cmds.parent(ctrlBoneGrp, ctrlParent[0])
             cmds.parent(ctrlBone, ctrlBoneGrp, a=1)
             zeroJointRotation(ctrlBone)
+        if not par:
+            freezeJointRotation(ctrlBone)
         createJointConnection(ctrlBone, bone)
     return ctrlBones, ctrlParents
 
@@ -1349,5 +1358,96 @@ def createPoleVector(pv=1, name='limb', *args):
 
 def createSpineClusters(*args):
     spline = args or cmds.ls(sl=1)
+    clusters = []
     splineShape = cmds.listRelatives(spline, s=1)
-    print splineShape
+    splineShape = str(splineShape[0])
+    numCV = cmds.getAttr(splineShape+'.controlPoints', size=1)
+    # Create Transforms for CVs
+    n = 0
+    while n < numCV:
+        midObj = cmds.createNode('transform', n=spline[0]+'_clusterCV'+str(n))
+        pos =  cmds.xform(splineShape+'.cv['+str(n)+']', q=1, ws=1, t=1)
+        cmds.setAttr(midObj+'.translate', *pos)
+        clusters.append(cmds.cluster(splineShape+'.cv['+str(n)+']', bs=1, wn=(midObj, midObj))[1])
+        n += 1
+    # Hook up Space Switchers
+    splineLength = getDistance(clusters[0], clusters[(numCV-1)])
+    x = 1
+    while x < numCV-1:
+        pos =  cmds.xform(splineShape+'.cv['+str(x)+']', q=1, ws=1, t=1)
+        distance = getDistance(clusters[0], clusters[x])
+        spaceRatio = distance/splineLength
+
+        newParent = createSpaceSwitch(1, 0, 0, 1, clusters[0], clusters[numCV-1], clusters[x])
+        cmds.setAttr(newParent+'.spaceBlend', easeInOutCubic(spaceRatio))
+        cmds.disconnectAttr(cmds.listConnections(newParent+'.translateX', s=1, d=0, scn=1, p=1)[0], newParent+'.translateX')
+        cmds.disconnectAttr(cmds.listConnections(newParent+'.translateY', s=1, d=0, scn=1, p=1)[0], newParent+'.translateY')
+        newParent = cmds.rename(newParent, clusters[x]+'_zTrans')
+        
+        newParent = createSpaceSwitch(1, 0, 0, 1, clusters[0], clusters[numCV-1], newParent)
+        cmds.setAttr(newParent+'.spaceBlend', spaceRatio)
+        cmds.disconnectAttr(cmds.listConnections(newParent+'.translateX', s=1, d=0, scn=1, p=1)[0], newParent+'.translateX')
+        cmds.disconnectAttr(cmds.listConnections(newParent+'.translateZ', s=1, d=0, scn=1, p=1)[0], newParent+'.translateZ')
+        newParent = cmds.rename(newParent, clusters[x]+'_yTrans')
+
+        newParent = createSpaceSwitch(1, 0, 0, 1, clusters[0], clusters[numCV-1], newParent)
+        cmds.setAttr(newParent+'.spaceBlend', easeInOutCubic(spaceRatio))
+        cmds.disconnectAttr(cmds.listConnections(newParent+'.translateY', s=1, d=0, scn=1, p=1)[0], newParent+'.translateY')
+        cmds.disconnectAttr(cmds.listConnections(newParent+'.translateZ', s=1, d=0, scn=1, p=1)[0], newParent+'.translateZ')
+        newParent = cmds.rename(newParent, clusters[x]+'_xTrans')
+        x += 1
+    return clusters
+
+def getDistance(*args):
+    vectorA = om.MVector(cmds.xform(args[0], q=1, ws=1, t=1))
+    vectorB = om.MVector(cmds.xform(args[1], q=1, ws=1, t=1))
+    vectorC = vectorB - vectorA
+    distance = om.MVector.length(vectorC)
+    return distance
+
+def easeInOutQuad(*args):
+    t = args[0]
+    if t<0.5:
+        return 2*t*t
+    else:
+        return -1+(4-2*t)*t
+
+def easeInOutCubic(*args):
+    t = args[0]
+    if t<0.5:
+        return 4*t*t*t
+    else:
+        return (t-1)*(2*t-2)*(2*t-2)+1
+
+def createSpineRig(*args):
+    controlName = args[2].split('_')[0]
+    spine = cmds.listRelatives(args[2], ad=1, typ='joint')
+    spine.append(args[2])
+    spine = reversed(spine)
+    controls, parents = createControlJoint(*spine, par=False)
+    ik = cmds.ikHandle(scv=0, fj=1, c=args[3], pcv=0, sj=controls[0], ee=controls[-1], sol='ikSplineSolver', n=controlName+'_ikHandle')
+    clusters = createSpineClusters(args[3])
+    cmds.parent(clusters[0], args[0])
+    cmds.parent(clusters[len(clusters)-1], args[1])
+    curveLength = cmds.arclen(args[3], ch=1)
+    lengthDivide = cmds.createNode('multiplyDivide', n=controlName+'_lengthDivide')
+    cmds.connectAttr(curveLength+'.arcLength', lengthDivide+'.input1X')
+    cmds.setAttr(lengthDivide+'.operation', 2)
+    cmds.setAttr(lengthDivide+'.input2X', cmds.getAttr(curveLength+'.arcLength'))
+    stretchSwitch = cmds.createNode('blendColors', n=controlName+'_stretchSwitch')
+    cmds.connectAttr(lengthDivide+'.outputX', stretchSwitch+'.color1R')
+    cmds.setAttr(stretchSwitch+'.color2R', 1)
+    cmds.addAttr(args[1], ln=controlName.lower()+'Stretch', at='float', k=1, min=0, max=1, dv=1)
+    cmds.connectAttr(args[1]+'.'+controlName.lower()+'Stretch', stretchSwitch+'.blender')
+    for bone in controls[:-1]:
+        cmds.connectAttr(stretchSwitch+'.outputR', bone+'.scaleX')
+    loVector = cmds.spaceLocator(n=controlName+'_loVector')
+    hiVector = cmds.spaceLocator(n=controlName+'_hiVector')
+    alignAtoB(loVector, controls[0])
+    alignAtoB(hiVector, controls[-1])
+    cmds.parent(loVector, args[0])
+    cmds.parent(hiVector, args[1])
+    cmds.setAttr(ik[0]+'.dTwistControlEnable', 1)
+    cmds.setAttr(ik[0]+'.dWorldUpType', 4)
+    cmds.connectAttr(loVector[0]+'.worldMatrix', ik[0]+'.dWorldUpMatrix')
+    cmds.connectAttr(hiVector[0]+'.worldMatrix', ik[0]+'.dWorldUpMatrixEnd')
