@@ -369,7 +369,7 @@ class rootRigger(dox_OptionsWindow):
         )
         self.nameText = cmds.textField(
             annotation='Character Name',
-            text='Character',
+            text='None',
             w=250
         )
         cmds.separator()
@@ -417,6 +417,105 @@ class rootRigger(dox_OptionsWindow):
         createRootRig(scale,name,pelvisBone)
         cmds.select(cl=1)
 
+class spineRigger(dox_OptionsWindow):
+    def __init__(self):
+        dox_OptionsWindow.__init__(self)
+        self.title = 'Dox Spine Rigging Tool'
+        self.actionName = 'Create'
+    def displayOptions(self):
+        self.xformCol = cmds.rowColumnLayout(nc=3)
+        self.pelvisLabel = cmds.textField(
+            annotation='Pelvis Control',
+            text='Pelvis Control',
+            bgc=[0.1,0.06,0.06],
+            editable=0,
+            w=115
+        )
+        self.pelvisText = cmds.textField(
+            annotation='Pelvis Control',
+            text='None',
+            w=250
+        )
+        self.pelvisButton = cmds.button(
+            label='add', w=50,
+            c=self.addPelvisCmd
+        )
+        self.chestLabel = cmds.textField(
+            annotation='Chest Control',
+            text='Chest Control',
+            bgc=[0.1,0.06,0.06],
+            editable=0,
+            w=115
+        )
+        self.chestText = cmds.textField(
+            annotation='Chest Control',
+            text='None',
+            w=250
+        )
+        self.chestButton = cmds.button(
+            label='add', w=50,
+            c=self.addChestCmd
+        )
+        self.spineLabel = cmds.textField(
+            annotation='First Spine Joint',
+            text='First Spine Joint',
+            bgc=[0.1,0.06,0.06],
+            editable=0,
+            w=115
+        )
+        self.spineText = cmds.textField(
+            annotation='First Spine Joint',
+            text='None',
+            w=250
+        )
+        self.spineButton = cmds.button(
+            label='add', w=50,
+            c=self.addSpineCmd
+        )
+        self.splineLabel = cmds.textField(
+            annotation='Spline Curve',
+            text='Spline Curve',
+            bgc=[0.1,0.06,0.06],
+            editable=0,
+            w=115
+        )
+        self.splineText = cmds.textField(
+            annotation='Spline Curve',
+            text='None',
+            w=250
+        )
+        self.splineButton = cmds.button(
+            label='add', w=50,
+            c=self.addSplineCmd
+        )
+    def addPelvisCmd(self, *args):
+        cmds.textField(self.pelvisText, e=1, text=str(cmds.ls(sl=1, type='joint', hd=1))[3:-2] or 'None')
+    def addChestCmd(self, *args):
+        cmds.textField(self.chestText, e=1, text=str(cmds.ls(sl=1, type='joint', hd=1))[3:-2] or 'None')
+    def addSpineCmd(self, *args):
+        cmds.textField(self.spineText, e=1, text=str(cmds.ls(sl=1, type='joint', hd=1))[3:-2] or 'None')
+    def addSplineCmd(self, *args):
+        cmds.textField(self.splineText, e=1, text=str(cmds.ls(sl=1, type='transform', hd=1))[3:-2] or 'None')
+    def applyBtnCmd(self, *args):
+        pelvis = cmds.textField(
+            self.pelvisText, q=1,
+            text=1
+        )
+        chest = cmds.textField(
+            self.chestText, q=1,
+            text=1
+        )
+        spine = cmds.textField(
+            self.spineText, q=1,
+            text=1
+        )
+        spline = cmds.textField(
+            self.splineText, q=1,
+            text=1
+        )
+        createSpineRig(pelvis,chest,spine,spline)
+        cmds.select(cl=1)
+
 def createRootRig(controlScale=1, name='Character', *args):
     pelvis = args[0] or cmds.ls(sl=1)[0] or []
     pelvisControl, pelvisParent = createControlJoint(pelvis)
@@ -433,6 +532,17 @@ def createRootRig(controlScale=1, name='Character', *args):
         addControlShape(shape, control)
     topGroup = cmds.createNode('transform', n=name)
     cmds.parent(root, pelvis, topGroup)
+    #Setup Scale Attr
+    scales = ['.scaleX', '.scaleY', '.scaleZ']
+    cmds.addAttr(root, ln='characterScale', at='float', k=1, dv=1, min=0.001)
+    for scale in scales:
+        cmds.connectAttr(root+'.characterScale', root+scale)
+        cmds.setAttr(root+scale, k=0)
+        cmds.setAttr(pelvis+scale, k=1, l=0)
+        cmds.disconnectAttr(pelvisControl[0]+scale,pelvis+scale)
+    cmds.scaleConstraint(pelvisControl[0],pelvis)
+    lockChannels(0,0,1,0,pelvis)
+    hideChannels(pelvis)
 
 def createClavicleRig(controlScale=1, *args):
     skinBones = args or cmds.ls(sl=True) or []
@@ -685,6 +795,7 @@ def createLegRig(controlScale=1, pv=1, **kwargs):
             length = cmds.xform(parents[n+1], q=1, t=1)[0]
         createSpaceSwitch(1, 1, 1, 0, controls[n], ik[n], rig[n])
         shape = shapes.cube(color)
+        print type(shape)
         cmds.parent(shape, controls[n])
         cmds.xform(shape, t=(length/2,0,0), ro=(0,0,0), s=(length, controlScale*(legControlScaleY[n]), controlScale*(legControlScaleZ[n])))
         addControlShape(shape, controls[n])
@@ -1268,7 +1379,7 @@ def unlockChannels(*args):
             cmds.setAttr(node+'.'+channel, k=1, l=0)
 
 def lockChannels(p=1, r=1, s=1, v=1, *args):
-    args = args or cmds.ls(sl=1)
+    args = list(args) or cmds.ls(sl=1)
     channels = []
     if p == 1:
         channels.append("translateX")
@@ -1359,6 +1470,7 @@ def createPoleVector(pv=1, name='limb', *args):
 def createSpineClusters(*args):
     spline = args or cmds.ls(sl=1)
     clusters = []
+    clustersPar = []
     splineShape = cmds.listRelatives(spline, s=1)
     splineShape = str(splineShape[0])
     numCV = cmds.getAttr(splineShape+'.controlPoints', size=1)
@@ -1395,8 +1507,9 @@ def createSpineClusters(*args):
         cmds.disconnectAttr(cmds.listConnections(newParent+'.translateY', s=1, d=0, scn=1, p=1)[0], newParent+'.translateY')
         cmds.disconnectAttr(cmds.listConnections(newParent+'.translateZ', s=1, d=0, scn=1, p=1)[0], newParent+'.translateZ')
         newParent = cmds.rename(newParent, clusters[x]+'_xTrans')
+        clustersPar.append(newParent)
         x += 1
-    return clusters
+    return clusters, clustersPar
 
 def getDistance(*args):
     vectorA = om.MVector(cmds.xform(args[0], q=1, ws=1, t=1))
@@ -1425,15 +1538,19 @@ def createSpineRig(*args):
     spine.append(args[2])
     spine = reversed(spine)
     controls, parents = createControlJoint(*spine, par=False)
+    root = findRoot(controls[0])
     ik = cmds.ikHandle(scv=0, fj=1, c=args[3], pcv=0, sj=controls[0], ee=controls[-1], sol='ikSplineSolver', n=controlName+'_ikHandle')
-    clusters = createSpineClusters(args[3])
+    clusters, clustersPar = createSpineClusters(args[3])
     cmds.parent(clusters[0], args[0])
     cmds.parent(clusters[len(clusters)-1], args[1])
     curveLength = cmds.arclen(args[3], ch=1)
     lengthDivide = cmds.createNode('multiplyDivide', n=controlName+'_lengthDivide')
     cmds.connectAttr(curveLength+'.arcLength', lengthDivide+'.input1X')
     cmds.setAttr(lengthDivide+'.operation', 2)
-    cmds.setAttr(lengthDivide+'.input2X', cmds.getAttr(curveLength+'.arcLength'))
+    scaleMultiply = cmds.createNode('multiplyDivide', n=controlName+'_scaleMultiply')
+    cmds.connectAttr(root+'.characterScale', scaleMultiply+'.input1X')
+    cmds.setAttr(scaleMultiply+'.input2X', cmds.getAttr(curveLength+'.arcLength'))
+    cmds.connectAttr(scaleMultiply+'.outputX', lengthDivide+'.input2X')
     stretchSwitch = cmds.createNode('blendColors', n=controlName+'_stretchSwitch')
     cmds.connectAttr(lengthDivide+'.outputX', stretchSwitch+'.color1R')
     cmds.setAttr(stretchSwitch+'.color2R', 1)
@@ -1451,3 +1568,9 @@ def createSpineRig(*args):
     cmds.setAttr(ik[0]+'.dWorldUpType', 4)
     cmds.connectAttr(loVector[0]+'.worldMatrix', ik[0]+'.dWorldUpMatrix')
     cmds.connectAttr(hiVector[0]+'.worldMatrix', ik[0]+'.dWorldUpMatrixEnd')
+    #Clean Up
+    for cluster in clustersPar:
+        cmds.parent(cluster, cmds.listRelatives(args[0], p=1))
+    lockChannels(1, 1, 1, 0, loVector[0], hiVector[0])
+    cmds.setAttr(loVector[0]+'.visibility', 0)
+    cmds.setAttr(hiVector[0]+'.visibility', 0)
