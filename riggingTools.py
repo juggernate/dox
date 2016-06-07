@@ -1238,8 +1238,8 @@ def createSpaceSwitch(point = 1, orient = 1, scale = 1, parent = 1, *spaceBones)
         cmds.select(spaceBlendObj)
     return spaceBlendObj
 
-def createParent(*childeren):
-    childeren = childeren or cmds.ls(sl=True) or []
+def createParent(*args):
+    childeren = args or cmds.ls(sl=True) or []
     newParents = []
     if childeren:
         n = 0
@@ -1566,11 +1566,54 @@ def createSpineRig(*args):
     cmds.parent(hiVector, args[1])
     cmds.setAttr(ik[0]+'.dTwistControlEnable', 1)
     cmds.setAttr(ik[0]+'.dWorldUpType', 4)
-    cmds.connectAttr(loVector[0]+'.worldMatrix', ik[0]+'.dWorldUpMatrix')
-    cmds.connectAttr(hiVector[0]+'.worldMatrix', ik[0]+'.dWorldUpMatrixEnd')
+    cmds.connectAttr(loVector[0]+'.worldMatrix', ik[0]+'.dWorldUcmdsatrix')
+    cmds.connectAttr(hiVector[0]+'.worldMatrix', ik[0]+'.dWorldUcmdsatrixEnd')
     #Clean Up
     for cluster in clustersPar:
         cmds.parent(cluster, cmds.listRelatives(args[0], p=1))
     lockChannels(1, 1, 1, 0, loVector[0], hiVector[0])
     cmds.setAttr(loVector[0]+'.visibility', 0)
     cmds.setAttr(hiVector[0]+'.visibility', 0)
+
+def skinBones(*args):
+    skin = args or cmds.ls(sl=1)
+    bones = cmds.skinCluster(skin[0], q=1, inf=1)
+    cmds.select(bones)
+    return bones
+
+def displayHandle(vis=1, *args):
+    objects = args or cmds.ls(sl=1)
+    for obj in objects:
+        cmds.setAttr(obj+'.displayHandle', vis)
+
+def displayAxis(vis=1, *args):
+    objects = args or cmds.ls(sl=1)
+    for obj in objects:
+        cmds.setAttr(obj+'.displayLocalAxis', vis)
+
+def setRigPose():
+    bind, rig = getDagPoses()
+    if rig:
+        cmds.delete(rig)
+        cmds.dagPose(s=1, n='rigPose')
+    else:
+        cmds.dagPose(s=1, n='rigPose')
+
+def loadRigPose():
+    bind, rig = getDagPoses()
+    cmds.dagPose(r=1, n=str(rig[0]))
+
+def loadBindPose():
+    bind, rig = getDagPoses()
+    cmds.dagPose(r=1, n=str(bind[0]))
+
+def getDagPoses():
+    poses = cmds.ls(type = 'dagPose') or []
+    bindPose = []
+    rigPose = []
+    for pose in poses:
+        if cmds.getAttr(pose+'.bindPose') == 1:
+            bindPose.append(pose)
+        else:
+            rigPose.append(pose)
+    return bindPose, rigPose
