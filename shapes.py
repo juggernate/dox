@@ -2,6 +2,11 @@
 
 import maya.cmds as cmds
 
+def alignAtoB(*args):
+    snap = args or cmds.ls(sl=1)
+    cmds.delete(cmds.pointConstraint(snap[1], snap[0]))
+    cmds.delete(cmds.orientConstraint(snap[1], snap[0]))
+
 def curvePoints(*args):
     curve = args or cmds.ls(sl=1)
     cvs = cmds.getAttr(str(curve[0])+'.spans')+cmds.getAttr(str(curve[0])+'.degree')
@@ -20,6 +25,7 @@ def curvePoints(*args):
         n+=1
 
 def arrow(color=1):
+    sel = cmds.ls(sl=1)
     shape = cmds.curve(d=1,
     p=[(0, 0.6724194, 0.4034517),
     (0, 0, 0.4034517),
@@ -31,9 +37,11 @@ def arrow(color=1):
     (0, 0.6724194, 0.4034517)],
     n='arrow')
     cmds.color(shape, ud=color)
+    alignAtoB(shape, sel)
     return shape
 
 def cube(color=1):
+    sel = cmds.ls(sl=1)
     shape = cmds.curve(d=1,
     p=[(-0.5, 0.5, 0.5),
     (0.5, 0.5, 0.5),
@@ -53,9 +61,11 @@ def cube(color=1):
     (-0.5, 0.5, -0.5)],
     n='cube')
     cmds.color(shape, ud=color)
+    alignAtoB(shape, sel)
     return shape
 
 def foot(color=1):
+    sel = cmds.ls(sl=1)
     shape = cmds.curve(d=1,
     p=[(-0.5, 0.5, 0.5),
     (0.5, 0.5, 0.5),
@@ -75,9 +85,11 @@ def foot(color=1):
     (-0.5, 1.0, -0.3256)],
     n='foot')
     cmds.color(shape, ud=color)
+    alignAtoB(shape, sel)
     return shape
 
 def square(color=1):
+    sel = cmds.ls(sl=1)
     shape = cmds.curve(d=1,
     p=[(-0.5, 0.0, 0.5),
     (0.5, 0.0, 0.5),
@@ -86,9 +98,11 @@ def square(color=1):
     (-0.5, 0.0, 0.5)],
     n='square')
     cmds.color(shape, ud=color)
+    alignAtoB(shape, sel)
     return shape
 
 def cross(color=1):
+    sel = cmds.ls(sl=1)
     shape = cmds.curve(d=1,
     p=[(1.0, 0.0, -1.0),
     (2.0, 0.0, -1.0),
@@ -105,9 +119,31 @@ def cross(color=1):
     (1.0, 0.0, -1.0)],
     n='cross')
     cmds.color(shape, ud=color)
+    alignAtoB(shape, sel)
+    return shape
+
+def capsule(color=1):
+    sel = cmds.ls(sl=1)
+    shape = cmds.curve(d=3,
+    p=[(0.0, 0.0, -1.0),
+    (-1.7313, 0.0, -1.0),
+    (-2.0923, 0.0, -1.0),
+    (-2.8645, 0.0, 0.0),
+    (-2.0923, 0.0, 1.0),
+    (-1.7313, 0.0, 1.0),
+    (1.7313, 0.0, 1.0),
+    (2.0923, 0.0, 1.0),
+    (2.8645, 0.0, 0.0),
+    (2.0923, 0.0, -1.0),
+    (1.7313, 0.0, -1.0),
+    (0.0, 0.0, -1.0)],
+    n='capsule')
+    cmds.color(shape, ud=color)
+    alignAtoB(shape, sel)
     return shape
 
 def sphere(color=1):
+    sel = cmds.ls(sl=1)
     shape = cmds.curve(d=1,
     p=[(0.0, 3.0, 0.0),
     (0.0, 2.0, -2.0),
@@ -128,14 +164,18 @@ def sphere(color=1):
     (0.0, 3.0, 0.0)],
     n='sphere')
     cmds.color(shape, ud=color)
+    alignAtoB(shape, sel)
     return shape
 
 def circle(color=1):
+    sel = cmds.ls(sl=1)
     shape = cmds.circle(n='circle', nr=(0,1,0), s=8, d=3)
     cmds.color(shape, ud=color)
+    alignAtoB(shape, sel)
     return shape
 
 def tearDrop(color=1):
+    sel = cmds.ls(sl=1)
     shape = cmds.curve(d=3,
     p=[(-0.0, -4.1153, 8.4438),
     (1.6329, -2.5612, 8.5338),
@@ -160,9 +200,11 @@ def tearDrop(color=1):
     (-0.0, -4.1153, 8.4438)],
     n='tearDrop')
     cmds.color(shape, ud=color)
+    alignAtoB(shape, sel)
     return shape
 
 def picker(color=1):
+    sel = cmds.ls(sl=1)
     shape = cmds.curve(d=3,
     p=[(-0.0, 0.0, 0.0),
     (-0.0, 0.6819, 0.0),
@@ -181,9 +223,11 @@ def picker(color=1):
     (0.0, 3.4611, 0.2782)],
     n='picker')
     cmds.color(shape, ud=color)
+    alignAtoB(shape, sel)
     return shape
 
 def pelvis(color=1):
+    sel = cmds.ls(sl=1)
     shape = cmds.curve(d=3,
     p=[(0.0, -6.3438, -6.0),
     (-0.5341, -6.3035, -7.2091),
@@ -222,9 +266,11 @@ def pelvis(color=1):
     (0.0, -6.3438, -6.0)],
     n='pelvis')
     cmds.color(shape, ud=color)
+    alignAtoB(shape, sel)
     return shape
 
 def body(color=1):
+    sel = cmds.ls(sl=1)
     shape = cmds.curve(d=1,
     p=[(3.3105, -4.6784, -10.4012),
     (3.3105, -4.6784, 8.4003),
@@ -255,9 +301,11 @@ def body(color=1):
     (11.8598, 12.1072, -12.3703)],
     n='body')
     cmds.color(shape, ud=color)
+    alignAtoB(shape, sel)
     return shape
 
 def clavicle(color=1):
+    sel = cmds.ls(sl=1)
     shape = cmds.curve(d=3,
     p=[(7.7788, 0.0034, -4.2633),
     (7.848, 1.0358, -4.2256),
@@ -282,9 +330,11 @@ def clavicle(color=1):
     (7.7788, 0.0034, -4.2633)],
     n='clavicle')
     cmds.color(shape, ud=color)
+    alignAtoB(shape, sel)
     return shape
 
 def heart(color=1):
+    sel = cmds.ls(sl=1)
     shape = cmds.curve(d=3,
     p=[(-0.0, -0.5189, 1.1962),
     (-0.1075, -0.1769, 1.1447),
@@ -309,9 +359,11 @@ def heart(color=1):
     (-0.0, -0.5189, 1.1962)],
     n='heart')
     cmds.color(shape, ud=color)
+    alignAtoB(shape, sel)
     return shape
 
 def circleArrow(color=1):
+    sel = cmds.ls(sl=1)
     shape = cmds.curve(d=3,
     p=[(0.0, 0.0, 72.8198),
     (3.3333, 0.0, 69.6114),
@@ -387,9 +439,11 @@ def circleArrow(color=1):
     (0.0, 0.0, 72.8198)],
     n='circleArrow')
     cmds.color(shape, ud=color)
+    alignAtoB(shape, sel)
     return shape
 
 def orient(color=1):
+    sel = cmds.ls(sl=1)
     shape = cmds.curve(d=3,
     p=[(0.096, 0.604, -0.0988),
     (0.5008, 0.5005, -0.0988),
@@ -449,4 +503,5 @@ def orient(color=1):
     (0.096, 0.604, -0.0988)],
     n='orient')
     cmds.color(shape, ud=color)
+    alignAtoB(shape, sel)
     return shape

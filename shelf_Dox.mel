@@ -372,6 +372,7 @@ global proc shelf_Dox () {
         -marginHeight 1
         -command "dox.rig.lockChannels(1,1,1,0)" 
         -sourceType "python" 
+        -doubleClickCommand "dox.rig.lockChannels(0,0,1,0)" 
         -commandRepeatable 1
         -flat 1
     ;
@@ -503,6 +504,37 @@ global proc shelf_Dox () {
         -manage 1
         -visible 1
         -preventOverride 0
+        -annotation "User Script" 
+        -enableBackground 0
+        -align "center" 
+        -label "Space Switcher" 
+        -labelOffset 0
+        -rotation 0
+        -flipX 0
+        -flipY 0
+        -useAlpha 1
+        -font "plainLabelFont" 
+        -imageOverlayLabel "SpaceS" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.5 
+        -image "alignStack.png" 
+        -image1 "alignStack.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "dox.rig.spaceSwitcher.showUI()" 
+        -sourceType "python" 
+        -commandRepeatable 1
+        -flat 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
         -annotation "Create Control Joint" 
         -enableBackground 0
         -align "center" 
@@ -523,6 +555,7 @@ global proc shelf_Dox () {
         -marginHeight 1
         -command "dox.rig.createControlJoint()" 
         -sourceType "python" 
+        -doubleClickCommand "dox.rig.createControlJoint(par=0)" 
         -commandRepeatable 1
         -flat 1
     ;
@@ -614,8 +647,8 @@ global proc shelf_Dox () {
         -style "iconOnly" 
         -marginWidth 1
         -marginHeight 1
-        -command "print(\"User defined macro\");" 
-        -sourceType "mel" 
+        -command "dox.rig.addControlShape()" 
+        -sourceType "python" 
         -commandRepeatable 1
         -flat 1
     ;
@@ -768,7 +801,7 @@ global proc shelf_Dox () {
         -style "iconOnly" 
         -marginWidth 1
         -marginHeight 1
-        -command "reload(dox.riggingTools)\nreload(dox.shapes)" 
+        -command "reload(dox.riggingTools)\nreload(dox.shapes)\nreload(dox.export)" 
         -sourceType "python" 
         -commandRepeatable 1
         -flat 1

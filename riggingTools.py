@@ -1,10 +1,48 @@
 ## Dox Rigging Tools written by Andrew Christophersen 2016
 
 import maya.cmds as cmds
-import dox.shapes as shapes
 import maya.api.OpenMaya as om
 import math
 from dox.ui import dox_OptionsWindow
+import dox.shapes as shapes
+
+class spaceSwitcher(dox_OptionsWindow):
+    def __init__(self):
+        dox_OptionsWindow.__init__(self)
+        self.title = 'Dox Space Switcher Tool'
+        self.actionName = 'Create'
+    def displayOptions(self):
+        cmds.columnLayout()
+        cmds.separator(height=5)
+        self.objType = cmds.checkBoxGrp(
+            label='Space Switcher Options: ',
+            labelArray4=[
+                'Position',
+                'Orientation',
+                'Scale',
+                'Parent'
+            ],
+            numberOfCheckBoxes=4
+        )
+    def applyBtnCmd(self, *args):
+        posIndex = cmds.checkBoxGrp(
+            self.objType, q=1,
+            v1=1
+        )
+        oriIndex = cmds.checkBoxGrp(
+            self.objType, q=1,
+            v2=1
+        )
+        scaleIndex = cmds.checkBoxGrp(
+            self.objType, q=1,
+            v3=1
+        )
+        parentIndex = cmds.checkBoxGrp(
+            self.objType, q=1,
+            v4=1
+        )
+        createSpaceSwitch(posIndex, oriIndex, scaleIndex, parentIndex)
+        cmds.select(cl=1)
 
 class armRigger(dox_OptionsWindow):
     def __init__(self):
@@ -795,7 +833,6 @@ def createLegRig(controlScale=1, pv=1, **kwargs):
             length = cmds.xform(parents[n+1], q=1, t=1)[0]
         createSpaceSwitch(1, 1, 1, 0, controls[n], ik[n], rig[n])
         shape = shapes.cube(color)
-        print type(shape)
         cmds.parent(shape, controls[n])
         cmds.xform(shape, t=(length/2,0,0), ro=(0,0,0), s=(length, controlScale*(legControlScaleY[n]), controlScale*(legControlScaleZ[n])))
         addControlShape(shape, controls[n])
@@ -828,19 +865,22 @@ def createLegRig(controlScale=1, pv=1, **kwargs):
             cmds.parent(revIkTrans[n], revIkTrans[n-2])
         else:
             cmds.parent(revIkTrans[n], revIkTrans[n-1])
-        cmds.makeIdentity(revIkTrans[n], apply=1)
         n += 1
     legIkTrans = cmds.rename(revIkTrans[0], prefix+'Foot_CTRL')
+    legIkTransPar = createParent(legIkTrans)
+    lockChannels(1, 1, 1, 0, legIkTransPar[0])
     cmds.parent(legIk[0], revIkTrans[3])
     cmds.parent(ballIk[0], revIkTrans[3])
     cmds.parent(toeIk[0], revIkTrans[4])
     legIkShape = shapes.foot(color)
-    snapAtoB(legIkShape, legIkTrans)
-    footLength = abs(cmds.xform(legLoc[1], q=1, t=1)[2])+abs(cmds.xform(legLoc[2], q=1, t=1)[2])
-    footOffset = abs(cmds.xform(legLoc[1], q=1, t=1)[2])-abs(cmds.xform(legLoc[0], q=1, t=1)[2])
-    cmds.xform(legIkShape, r=1, t=(0,cmds.xform(legLoc[0], q=1, t=1)[1]*-1,(footLength/2)-footOffset), s=(controlScale*(footLength/2), 1.2*cmds.xform(legLoc[0], q=1, t=1)[1], controlScale*footLength))
+    alignAtoB(legIkShape, legIkTrans)
+    footLength = abs(cmds.xform(legLoc[1], q=1, ws=1, t=1)[2])+abs(cmds.xform(legLoc[2], q=1, ws=1, t=1)[2])
+    footOffset = abs(cmds.xform(legLoc[1], q=1, ws=1, t=1)[2])-abs(cmds.xform(legLoc[0], q=1, ws=1, t=1)[2])
+    cmds.xform(legIkShape, r=1, os=1, t=(0,0,(footLength/2)-footOffset))
+    cmds.xform(legIkShape, r=1, t=(0,cmds.xform(legLoc[0], q=1, ws=1, t=1)[1]*-1,0), s=(controlScale*(footLength/2), 1.2*cmds.xform(legLoc[0], q=1, ws=1, t=1)[1], controlScale*footLength))
     addControlShape(legIkShape, legIkTrans)
     cmds.xform(legIkTrans, p=1, roo='xzy' )
+    lockChannels(0, 0, 1, 0, legIkTrans)
     #Pole Vector
     poleVector = createPoleVector(pv, controlName, *ik[:3])
     cmds.parent(poleVector, root)
@@ -1246,7 +1286,7 @@ def createParent(*args):
         for child in childeren:
             currentParent = cmds.listRelatives(child, p=1, f=1)
             cmds.select(cl=1)
-            if cmds.nodeType(currentParent) == 'joint':
+            if cmds.nodeType(child) == 'joint':
                 newParents.append(cmds.joint(n=child+'_par'))
             else:
                 newParents.append(cmds.createNode('transform', n=child+'_par'))
