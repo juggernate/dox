@@ -3,9 +3,10 @@
 import maya.cmds as cmds
 
 def alignAtoB(*args):
-    snap = args or cmds.ls(sl=1)
-    cmds.delete(cmds.pointConstraint(snap[1], snap[0]))
-    cmds.delete(cmds.orientConstraint(snap[1], snap[0]))
+    if cmds.objectType(args[1]) == 'joint':
+        snap = args
+        cmds.delete(cmds.pointConstraint(snap[1], snap[0]))
+        cmds.delete(cmds.orientConstraint(snap[1], snap[0]))
 
 def curvePoints(*args):
     curve = args or cmds.ls(sl=1)
@@ -166,6 +167,26 @@ def sphere(color=1):
     cmds.color(shape, ud=color)
     alignAtoB(shape, sel)
     return shape
+
+def quarterSphere(color=1):
+    sel = cmds.ls(sl=1)
+    shape = cmds.curve(d=1,
+    p=[(0.0, 3.0, 0.0),
+    (2.0, 2.0, 0.0),
+    (3.0, -0.0, 0.0),
+    (2.0, -0.0, 2.0),
+    (0.0, -0.0, 3.0),
+    (0.0, 2.0, 2.0),
+    (0.0, 3.0, 0.0),
+    (0.0, 2.0, -2.0),
+    (0.0, -0.0, -3.0),
+    (2.0, -0.0, -2.0),
+    (3.0, -0.0, 0.0)],
+    n='quarterSphere')
+    cmds.color(shape, ud=color)
+    alignAtoB(shape, sel)
+    return shape
+
 
 def circle(color=1):
     sel = cmds.ls(sl=1)

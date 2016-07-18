@@ -877,7 +877,7 @@ def createLegRig(controlScale=1, pv=1, **kwargs):
     footLength = abs(cmds.xform(legLoc[1], q=1, ws=1, t=1)[2])+abs(cmds.xform(legLoc[2], q=1, ws=1, t=1)[2])
     footOffset = abs(cmds.xform(legLoc[1], q=1, ws=1, t=1)[2])-abs(cmds.xform(legLoc[0], q=1, ws=1, t=1)[2])
     cmds.xform(legIkShape, r=1, os=1, t=(0,0,(footLength/2)-footOffset))
-    cmds.xform(legIkShape, r=1, t=(0,cmds.xform(legLoc[0], q=1, ws=1, t=1)[1]*-1,0), s=(controlScale*(footLength/2), 1.2*cmds.xform(legLoc[0], q=1, ws=1, t=1)[1], controlScale*footLength))
+    cmds.xform(legIkShape, r=1, t=(0,cmds.xform(legLoc[0], q=1, ws=1, t=1)[1]*-1,0), s=(controlScale*(footLength/2), 1.2*cmds.xform(legLoc[0], q=1, ws=1, t=1)[1], footLength))
     addControlShape(legIkShape, legIkTrans)
     cmds.xform(legIkTrans, p=1, roo='xzy' )
     lockChannels(0, 0, 1, 0, legIkTrans)
@@ -915,6 +915,7 @@ def createLegRig(controlScale=1, pv=1, **kwargs):
         'toeLift':'toe.rotateX',
         'ballRoll':'ball.rotateX',
         'ballSwivel':'ball.rotateY',
+        'ballTwist':'ball.rotateZ',
         'toeWiggle':'toeWiggle.rotateX',
         'heelLift':'heel.rotateX'}
     for name in ikAttrNames:
@@ -1047,8 +1048,9 @@ def fingerSetup(controlScale=1, *args):
     wristFollow = args[0]
     fingerControls = args[2]
     fingerParents = args[1]
+    fingerName = str(fingerParents[0]).lower()
     color = limbColor(fingerControls[0])
-    if len(fingerParents) == 4 or str(str(fingerParents[0]).lower()).find('thumb') > -1:
+    if len(fingerParents) == 4 or fingerName.find('thumb') > -1:
         knuckle = fingerControls[1]
     else:
         knuckle = fingerControls[0]
@@ -1068,20 +1070,20 @@ def fingerSetup(controlScale=1, *args):
     cmds.addAttr(fingerControl, ln='twist', at='float', k=1)
     #Connect Attributes
     n = 0
-    if str(str(fingerParents[0]).lower()).find('thumb') > -1:
+    if fingerName.find('thumb') > -1:
         cmds.connectAttr(fingerControl+'.spread', fingerParents[0+n]+'.rotateY')
     else:
         spreadMult = cmds.createNode('multiplyDivide', n=str(fingerParents[0])[:-5]+'spreadMult')
         cmds.connectAttr(fingerControl+'.spread', spreadMult+'.input1X')
         cmds.connectAttr(fingerControl+'.spread', spreadMult+'.input1Y')
         cmds.setAttr(spreadMult+'.input2X', 0.25)
-        if str(fingerParents[0]).find('middle') > -1:
+        if fingerName.find('middle') > -1:
             cmds.setAttr(spreadMult+'.input2X', 0.1)
             cmds.setAttr(spreadMult+'.input2Y', 0.5)
-        if str(fingerParents[0]).find('ring') > -1:
+        if fingerName.find('ring') > -1:
             cmds.setAttr(spreadMult+'.input2X', -0.1)
             cmds.setAttr(spreadMult+'.input2Y', -0.5)
-        if str(fingerParents[0]).find('pinky') > -1:
+        if fingerName.find('pinky') > -1:
             cmds.setAttr(spreadMult+'.input2X', -0.25)
             cmds.setAttr(spreadMult+'.input2Y', -1.0)
         if len(fingerParents) == 4:
@@ -1109,6 +1111,40 @@ def fingerSetup(controlScale=1, *args):
     #Lock Bones
     lockChannels(1, 1, 1, 0, *fingerParents)
     zeroRadius(*fingerParents)
+
+def setupStrechyIk(condition, control, curve, ikBones):
+    root = findRoot(control)
+    controlName = str(control)[:-5]
+    ikBones = getJointChain(ikBones)
+    distance = cmds.arclen(curve, ch=1)
+    distanceMult = cmds.createNode('multiplyDivide', n=controlName+'_distanceMult')
+    cmds.setAttr(distanceMult+'.input1X', cmds.getAttr(distance+'.arcLength'))
+    cmds.connectAttr(root+'.scaleY', distanceMult+'.input2X')
+    distanceDivide = cmds.createNode('multiplyDivide', n=controlName+'_distanceDivide')
+    cmds.setAttr(distanceDivide+'.operation', 2)
+    cmds.connectAttr(distance+'.arcLength', distanceDivide+'.input1X')
+    cmds.connectAttr(distanceMult+'.outputX', distanceDivide+'.input2X')
+    cmds.addAttr(control, ln='stretch', at='float', k=1, min=0, max=1)
+    stretchBlender = cmds.createNode('blendColors', n=controlName+'_stretchBlender')
+    cmds.connectAttr(control+'.stretch', stretchBlender+'.blender')
+    if condition:
+        stretchCondition = cmds.createNode('condition', n=controlName+'_stretchCondition')
+        cmds.setAttr(stretchCondition+'.operation', 2)
+        cmds.connectAttr(distance+'.arcLength', stretchCondition+'.firstTerm')
+        cmds.connectAttr(distanceMult+'.outputX', stretchCondition+'.secondTerm')
+        cmds.connectAttr(distanceDivide+'.outputX', stretchCondition+'.colorIfTrueR')
+        cmds.connectAttr(stretchCondition+'.outColorR', stretchBlender+'.color1R')
+    else:
+        cmds.connectAttr(distanceDivide+'.outputX', stretchBlender+'.color1R')
+    for bone in ikBones:
+        cmds.connectAttr(stretchBlender+'.outputR', bone+'.scaleX')
+    cmds.setAttr(stretchBlender+'.color2R', 1)
+
+def getJointChain(*args):
+    chain = cmds.listRelatives(args[0], ad=1, type='joint')
+    chain.append(args[0])
+    chain.sort()
+    return chain
 
 def freezeJointRotation(*args):
     joints = args or cmds.ls(sl=True) or []
@@ -1446,6 +1482,11 @@ def hideChannels(*args):
         for channel in channels:
             cmds.setAttr(node+'.'+channel, k=0)
 
+def setScaleCompensate(value):
+    bones = getJointChain(cmds.ls(sl=1)[0])
+    for bone in bones:
+        cmds.setAttr(bone+'.segmentScaleCompensate', value)
+
 def zeroRadius(*args):
     bones = args or cmds.ls(sl=1)
     for node in bones:
@@ -1657,3 +1698,10 @@ def getDagPoses():
         else:
             rigPose.append(pose)
     return bindPose, rigPose
+
+def align(*args):
+    obj = args or cmds.ls(sl=1)
+    rot = cmds.xform(obj[1], q=1, ws=1, ro=1)
+    trans = cmds.xform(obj[1], q=1, ws=1, t=1)
+    cmds.xform(obj[0], ws=1, ro=rot)
+    cmds.xform(obj[0], ws=1, t=trans)

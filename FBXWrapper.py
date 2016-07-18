@@ -65,7 +65,6 @@ def _FBXCmd(_CMD, *args, **kwargs):
     # special case -q for compatibility with python API
 
     kwargs_string = " ".join(map(kwarg_fmt, kwargs.items()))
-
     return maya.mel.eval(_CMD + " " + kwargs_string + " " + arg_string + ";")
 
 
