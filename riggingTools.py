@@ -1140,6 +1140,47 @@ def setupStrechyIk(condition, control, curve, ikBones):
         cmds.connectAttr(stretchBlender+'.outputR', bone+'.scaleX')
     cmds.setAttr(stretchBlender+'.color2R', 1)
 
+def createEyeRig(**kwargs):
+    eyeCTRL, eyeParent = createControlJoint(*kwargs['eyes'])
+    lidCTRL, lidParent = createControlJoint(*kwargs['lids'])
+    aimParent = cmds.createNode('transform', n="Eye_Aim")
+    eyeHeight = cmds.xform(eyeCTRL[0], q=1, ws=1, t=1)[1]
+    cmds.xform(aimParent, ws=1, t=(0, eyeHeight, 300))
+    cmds.makeIdentity(aimParent, apply=1)
+    shape = shapes.capsule(8)
+    cmds.xform(shape, ws=1, t=(0, eyeHeight, 300), ro=(90,0,0), s=(3,3,3))
+    addControlShape(shape, aimParent)
+    aim = [cmds.createNode('transform', n="L_Eye_Aim")]
+    aim.append(cmds.createNode('transform', n="R_Eye_Aim"))
+    # Eye target setup
+    for index, x in enumerate(aim):
+        cmds.parent(x, aimParent)
+        alignAtoB(x, aimParent)
+        cmds.xform(x, ws=1, t=(cmds.xform(eyeCTRL[index], q=1, ws=1, t=1)[0], eyeHeight, 300))
+        cmds.makeIdentity(x, apply=1)
+        if index:
+            cmds.aimConstraint(x, eyeParent[index], aim=(-1.0,0,0), u=(0,-1.0,0))
+        else:
+            cmds.aimConstraint(x, eyeParent[index], aim=(1.0,0,0), u=(0,1.0,0))
+        shape = shapes.circle(8)
+        cmds.xform(shape, ws=1, t=(cmds.xform(eyeCTRL[index], q=1, ws=1, t=1)[0], eyeHeight, 300), ro=(90,0,0), s=(2,2,2))
+        addControlShape(shape, x)
+        lockChannels(0,1,1,0, x)
+    # Eye Lid control setup
+    for index, x in enumerate(lidParent):
+        if index % 2:
+            cmds.addAttr(aim[int(index/2)], ln='loLid', at='float', k=1)
+            cmds.connectAttr(aim[int(index/2)]+'.loLid', x+'.rotateZ')
+            cmds.connectAttr(aim[int(index/2)]+'.angle', x+'.rotateX')
+        else:
+            cmds.addAttr(aim[int(index/2)], ln='upLid', at='float', k=1)
+            cmds.addAttr(aim[int(index/2)], ln='angle', at='float', k=1)
+            cmds.connectAttr(aim[int(index/2)]+'.upLid', x+'.rotateZ')
+            cmds.connectAttr(aim[int(index/2)]+'.angle', x+'.rotateX')
+    cmds.aimConstraint(cmds.listRelatives(eyeParent[0], p=1), aimParent, aim=(0,0,-1.0), mo=1)
+    lockChannels(0,1,1,0, aimParent)
+    cmds.parent(aimParent, 'Root_CTRL')
+
 def getJointChain(*args):
     chain = cmds.listRelatives(args[0], ad=1, type='joint')
     chain.append(args[0])
@@ -1647,8 +1688,8 @@ def createSpineRig(*args):
     cmds.parent(hiVector, args[1])
     cmds.setAttr(ik[0]+'.dTwistControlEnable', 1)
     cmds.setAttr(ik[0]+'.dWorldUpType', 4)
-    cmds.connectAttr(loVector[0]+'.worldMatrix', ik[0]+'.dWorldUcmdsatrix')
-    cmds.connectAttr(hiVector[0]+'.worldMatrix', ik[0]+'.dWorldUcmdsatrixEnd')
+    cmds.connectAttr(loVector[0]+'.worldMatrix', ik[0]+'.dWorldUpMatrix')
+    cmds.connectAttr(hiVector[0]+'.worldMatrix', ik[0]+'.dWorldUpMatrixEnd')
     #Clean Up
     for cluster in clustersPar:
         cmds.parent(cluster, cmds.listRelatives(args[0], p=1))

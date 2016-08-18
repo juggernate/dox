@@ -65,6 +65,7 @@ def _FBXCmd(_CMD, *args, **kwargs):
     # special case -q for compatibility with python API
 
     kwargs_string = " ".join(map(kwarg_fmt, kwargs.items()))
+    print _CMD + " " + kwargs_string + " " + arg_string + ";"
     return maya.mel.eval(_CMD + " " + kwargs_string + " " + arg_string + ";")
 
 
@@ -422,3 +423,11 @@ def FBXUICallBack(*args, **kwargs):
 
 def FBXUIShowOptions(*args, **kwargs):
     return _FBXCmd("FBXUIShowOptions", *args, **kwargs)
+
+
+def FBXExportSplitAnimationIntoTakes(*args, **kwargs):
+    return _FBXCmd("FBXExportSplitAnimationIntoTakes", *args, **kwargs)
+
+
+def FBXExportTriangulate(*args, **kwargs):
+    return _FBXCmd("FBXExportTriangulate", *args, **kwargs)

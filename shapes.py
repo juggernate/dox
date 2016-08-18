@@ -21,7 +21,7 @@ def curvePoints(*args):
         if n == 0:
             start = '    p=[('
         elif n == (cvs-1):
-            end = ')],'
+            end = ')])'
         print(start+str(transform)[1:-1]+end)
         n+=1
 
@@ -35,8 +35,7 @@ def arrow(color=1):
     (0, 0, -0.6724194),
     (0, 0, -0.4034517),
     (0, 0.6724194, -0.4034517),
-    (0, 0.6724194, 0.4034517)],
-    n='arrow')
+    (0, 0.6724194, 0.4034517)])
     cmds.color(shape, ud=color)
     alignAtoB(shape, sel)
     return shape
@@ -59,8 +58,7 @@ def cube(color=1):
     (0.5, 0.5, -0.5),
     (0.5, -0.5, -0.5),
     (-0.5, -0.5, -0.5),
-    (-0.5, 0.5, -0.5)],
-    n='cube')
+    (-0.5, 0.5, -0.5)])
     cmds.color(shape, ud=color)
     alignAtoB(shape, sel)
     return shape
@@ -83,8 +81,7 @@ def foot(color=1):
     (0.5, 1.0, -0.3256),
     (0.5, 0.0, -0.5),
     (-0.5, 0.0, -0.5),
-    (-0.5, 1.0, -0.3256)],
-    n='foot')
+    (-0.5, 1.0, -0.3256)])
     cmds.color(shape, ud=color)
     alignAtoB(shape, sel)
     return shape
@@ -96,8 +93,7 @@ def square(color=1):
     (0.5, 0.0, 0.5),
     (0.5, 0.0, -0.5),
     (-0.5, 0.0, -0.5),
-    (-0.5, 0.0, 0.5)],
-    n='square')
+    (-0.5, 0.0, 0.5)])
     cmds.color(shape, ud=color)
     alignAtoB(shape, sel)
     return shape
@@ -117,8 +113,7 @@ def cross(color=1):
     (-1.0, 0.0, -1.0),
     (-1.0, 0.0, -2.0),
     (1.0, 0.0, -2.0),
-    (1.0, 0.0, -1.0)],
-    n='cross')
+    (1.0, 0.0, -1.0)])
     cmds.color(shape, ud=color)
     alignAtoB(shape, sel)
     return shape
@@ -137,8 +132,7 @@ def capsule(color=1):
     (2.8645, 0.0, 0.0),
     (2.0923, 0.0, -1.0),
     (1.7313, 0.0, -1.0),
-    (0.0, 0.0, -1.0)],
-    n='capsule')
+    (0.0, 0.0, -1.0)])
     cmds.color(shape, ud=color)
     alignAtoB(shape, sel)
     return shape
@@ -162,8 +156,7 @@ def sphere(color=1):
     (-2.0, -2.0, 0.0),
     (-3.0, 0.0, 0.0),
     (-2.0, 2.0, 0.0),
-    (0.0, 3.0, 0.0)],
-    n='sphere')
+    (0.0, 3.0, 0.0)])
     cmds.color(shape, ud=color)
     alignAtoB(shape, sel)
     return shape
@@ -181,8 +174,7 @@ def quarterSphere(color=1):
     (0.0, 2.0, -2.0),
     (0.0, -0.0, -3.0),
     (2.0, -0.0, -2.0),
-    (3.0, -0.0, 0.0)],
-    n='quarterSphere')
+    (3.0, -0.0, 0.0)])
     cmds.color(shape, ud=color)
     alignAtoB(shape, sel)
     return shape
@@ -190,10 +182,10 @@ def quarterSphere(color=1):
 
 def circle(color=1):
     sel = cmds.ls(sl=1)
-    shape = cmds.circle(n='circle', nr=(0,1,0), s=8, d=3)
+    shape = cmds.circle(nr=(0,1,0), s=8, d=3)
     cmds.color(shape, ud=color)
     alignAtoB(shape, sel)
-    return shape
+    return shape[0]
 
 def tearDrop(color=1):
     sel = cmds.ls(sl=1)
@@ -218,8 +210,7 @@ def tearDrop(color=1):
     (-8.6014, -0.3202, 5.1091),
     (-4.7501, -1.3951, 7.1464),
     (-1.6329, -2.5612, 8.5338),
-    (-0.0, -4.1153, 8.4438)],
-    n='tearDrop')
+    (-0.0, -4.1153, 8.4438)])
     cmds.color(shape, ud=color)
     alignAtoB(shape, sel)
     return shape
@@ -241,8 +232,7 @@ def picker(color=1):
     (0.111, 2.442, 0.3148),
     (0.4157, 3.0141, 0.3105),
     (0.2284, 3.3932, 0.2834),
-    (0.0, 3.4611, 0.2782)],
-    n='picker')
+    (0.0, 3.4611, 0.2782)])
     cmds.color(shape, ud=color)
     alignAtoB(shape, sel)
     return shape
@@ -284,8 +274,7 @@ def pelvis(color=1):
     (5.648, -5.0157, -11.5076),
     (2.2916, -6.0529, -9.3811),
     (0.5341, -6.3035, -7.2091),
-    (0.0, -6.3438, -6.0)],
-    n='pelvis')
+    (0.0, -6.3438, -6.0)])
     cmds.color(shape, ud=color)
     alignAtoB(shape, sel)
     return shape
@@ -319,8 +308,7 @@ def body(color=1):
     (-11.8598, 12.1072, -12.3703),
     (-11.8598, 12.1072, 11.5405),
     (11.8598, 12.1072, 11.5405),
-    (11.8598, 12.1072, -12.3703)],
-    n='body')
+    (11.8598, 12.1072, -12.3703)])
     cmds.color(shape, ud=color)
     alignAtoB(shape, sel)
     return shape
@@ -348,8 +336,7 @@ def clavicle(color=1):
     (8.8303, 7.2756, -1.9342),
     (9.0964, 3.4647, -3.6826),
     (8.1561, 1.0344, -4.2339),
-    (7.7788, 0.0034, -4.2633)],
-    n='clavicle')
+    (7.7788, 0.0034, -4.2633)])
     cmds.color(shape, ud=color)
     alignAtoB(shape, sel)
     return shape
@@ -377,8 +364,7 @@ def heart(color=1):
     (0.5663, 0.3427, 0.568),
     (0.3128, 0.0787, 1.0075),
     (0.1075, -0.1769, 1.1447),
-    (-0.0, -0.5189, 1.1962)],
-    n='heart')
+    (-0.0, -0.5189, 1.1962)])
     cmds.color(shape, ud=color)
     alignAtoB(shape, sel)
     return shape
@@ -457,8 +443,7 @@ def circleArrow(color=1):
     (-10.0, 0.0, 63.1947),
     (-6.6667, 0.0, 66.4031),
     (-3.3333, 0.0, 69.6114),
-    (0.0, 0.0, 72.8198)],
-    n='circleArrow')
+    (0.0, 0.0, 72.8198)])
     cmds.color(shape, ud=color)
     alignAtoB(shape, sel)
     return shape
@@ -521,8 +506,7 @@ def orient(color=1):
     (0.096, 0.3279, -0.7512),
     (0.096, 0.3279, -0.7512),
     (0.096, 0.5005, -0.5008),
-    (0.096, 0.604, -0.0988)],
-    n='orient')
+    (0.096, 0.604, -0.0988)])
     cmds.color(shape, ud=color)
     alignAtoB(shape, sel)
     return shape
