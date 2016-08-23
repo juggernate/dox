@@ -857,7 +857,7 @@ def createLegRig(controlScale=1, pv=1, **kwargs):
     revIkTrans = []
     n = 0
     for loc in legLoc:
-        revIkTrans.append(cmds.createNode('transform', n=prefix+'rev_'+list(loc.split('_'))[0]))
+        revIkTrans.append(cmds.createNode('transform', n=prefix+'_rev_'+list(loc.split('_'))[0]))
         alignAtoB(revIkTrans[n], loc)
         if n == 0:
             cmds.parent(revIkTrans[n], root)
@@ -866,7 +866,7 @@ def createLegRig(controlScale=1, pv=1, **kwargs):
         else:
             cmds.parent(revIkTrans[n], revIkTrans[n-1])
         n += 1
-    legIkTrans = cmds.rename(revIkTrans[0], prefix+'Foot_CTRL')
+    legIkTrans = cmds.rename(revIkTrans[0], prefix+'_Foot_CTRL')
     legIkTransPar = createParent(legIkTrans)
     lockChannels(1, 1, 1, 0, legIkTransPar[0])
     cmds.parent(legIk[0], revIkTrans[3])
@@ -897,7 +897,7 @@ def createLegRig(controlScale=1, pv=1, **kwargs):
     cmds.parent(footFollow, root)
     cmds.makeIdentity(footFollow, apply=1)
     cmds.pointConstraint(legIkTrans, footFollow)
-    followOri = ['Foot_orient_all', 'Foot_orient_yaw']
+    followOri = ['_Foot_orient_all', '_Foot_orient_yaw']
     for ori in followOri:
         cmds.createNode('transform', n=prefix+ori)
         snapAtoB(prefix+ori, footFollow)
@@ -920,7 +920,7 @@ def createLegRig(controlScale=1, pv=1, **kwargs):
         'heelLift':'heel.rotateX'}
     for name in ikAttrNames:
         cmds.addAttr(legIkTrans, ln=name, at='float', k=1)
-        cmds.connectAttr(legIkTrans+'.'+name, prefix+'rev_'+ikAttrNames[name])
+        cmds.connectAttr(legIkTrans+'.'+name, prefix+'_rev_'+ikAttrNames[name])
     #Setup IKFK Attributes
     cmds.addAttr(root, ln=attrName+'IK_FK', at='float', k=1, min=0, max=1, dv=1)
     cmds.addAttr(root, ln=attrName+'Template', at='float', k=1, min=0, max=1)

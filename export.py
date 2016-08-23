@@ -2,7 +2,7 @@ import maya.cmds as cmds
 import dox.FBXWrapper as fbxw
 import os
 
-def animationExport():
+def animation():
     startFrame = int(cmds.playbackOptions(q=1, minTime=True))
     endFrame = int(cmds.playbackOptions(q=1, maxTime=True))
     savePath = findPath()
@@ -27,7 +27,7 @@ def animationExport():
 
     fbxw.FBXExport(f = savePath, s = 1)
 
-def meshExport():
+def mesh():
     savePath = findPath()
     select(Mesh = True)
     fbxw.FBXResetExport()
