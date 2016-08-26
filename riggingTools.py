@@ -1143,15 +1143,15 @@ def setupStrechyIk(condition, control, curve, ikBones):
 def createEyeRig(**kwargs):
     eyeCTRL, eyeParent = createControlJoint(*kwargs['eyes'])
     lidCTRL, lidParent = createControlJoint(*kwargs['lids'])
-    aimParent = cmds.createNode('transform', n="Eye_Aim")
+    aimParent = cmds.createNode('transform', n="Eye_Aim_CTRL")
     eyeHeight = cmds.xform(eyeCTRL[0], q=1, ws=1, t=1)[1]
     cmds.xform(aimParent, ws=1, t=(0, eyeHeight, 300))
     cmds.makeIdentity(aimParent, apply=1)
     shape = shapes.capsule(8)
     cmds.xform(shape, ws=1, t=(0, eyeHeight, 300), ro=(90,0,0), s=(3,3,3))
     addControlShape(shape, aimParent)
-    aim = [cmds.createNode('transform', n="L_Eye_Aim")]
-    aim.append(cmds.createNode('transform', n="R_Eye_Aim"))
+    aim = [cmds.createNode('transform', n="L_Eye_Aim_CTRL")]
+    aim.append(cmds.createNode('transform', n="R_Eye_Aim_CTRL"))
     # Eye target setup
     for index, x in enumerate(aim):
         cmds.parent(x, aimParent)
@@ -1746,3 +1746,11 @@ def align(*args):
     trans = cmds.xform(obj[1], q=1, ws=1, t=1)
     cmds.xform(obj[0], ws=1, ro=rot)
     cmds.xform(obj[0], ws=1, t=trans)
+
+def scaleView():
+    cameras = cmds.ls(type='camera')
+    for cam in cameras:
+        cmds.setAttr(cam+'.nearClipPlane', 1)
+        cmds.setAttr(cam+'.farClipPlane', 10000)
+        cmds.viewSet(cam, h=1)
+        cmds.viewFit(cam, all=1)
