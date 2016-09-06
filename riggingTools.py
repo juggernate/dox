@@ -1537,6 +1537,8 @@ def alignAtoB(*args):
     snap = args or cmds.ls(sl=1)
     cmds.delete(cmds.pointConstraint(snap[1], snap[0]))
     cmds.delete(cmds.orientConstraint(snap[1], snap[0]))
+    # cmds.xform (snap[0], t=cmds.xform(snap[1], q=1, rp=1, ws=1), ws=1)
+    # cmds.xform (snap[0], ro=cmds.xform(snap[1], q=1, ro=1, ws=1), ws=1)
 
 def snapAtoB(*args):
     snap = args or cmds.ls(sl=1)

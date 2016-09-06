@@ -779,6 +779,36 @@ global proc shelf_Dox () {
     shelfButton
         -enableCommandRepeat 1
         -enable 1
+        -width 35
+        -height 35
+        -manage 1
+        -visible 1
+        -preventOverride 0
+        -annotation "Select Controls" 
+        -enableBackground 0
+        -align "center" 
+        -label "Select Controls" 
+        -labelOffset 0
+        -rotation 0
+        -flipX 0
+        -flipY 0
+        -useAlpha 1
+        -font "plainLabelFont" 
+        -overlayLabelColor 0.8 0.8 0.8 
+        -overlayLabelBackColor 0 0 0 0.5 
+        -image "selectModel.png" 
+        -image1 "selectModel.png" 
+        -style "iconOnly" 
+        -marginWidth 1
+        -marginHeight 1
+        -command "cmds.select('*CTRL')" 
+        -sourceType "python" 
+        -commandRepeatable 1
+        -flat 1
+    ;
+    shelfButton
+        -enableCommandRepeat 1
+        -enable 1
         -width 23
         -height 23
         -manage 1
@@ -801,7 +831,7 @@ global proc shelf_Dox () {
         -style "iconOnly" 
         -marginWidth 1
         -marginHeight 1
-        -command "reload(dox.riggingTools)\nreload(dox.shapes)\nreload(dox.export)" 
+        -command "reload(dox.riggingTools)\nreload(dox.shapes)\nreload(dox.export)\nreload(dox.FBXWrapper)\nreload(dox.skin)" 
         -sourceType "python" 
         -commandRepeatable 1
         -flat 1
