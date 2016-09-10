@@ -65,17 +65,19 @@ def findPath():
     return savePath
 
 def select(Mesh = False):
+    exportSelection = []
     if cmds.objExists('Pelvis'):
-        cmds.select('Pelvis')
+        exportSelection.append('Pelvis')
     else:
-        cmds.select('Root')
-    cmds.select(hi=1)
-    cmds.select('*Constraint*', d=1)
+        exportSelection.append('Root')
+    exportSelection.extend(cmds.listRelatives(exportSelection[0], ad=1))
+    if str(exportSelection).find('*Constraint*') > -1:
+        cmds.select('*Constraint*', d=1)
     if Mesh:
-        meshes = []
         joints = cmds.ls(sl=1)
         clusters = list(set(cmds.listConnections(joints,type='skinCluster')))
         for cluster in clusters:
             shape = cmds.skinCluster(cluster, q=1, geometry=1)
-            meshes.append(cmds.listRelatives(shape, parent=1)[0])
-        cmds.select(meshes, add=1)
+            exportSelection.append(cmds.listRelatives(shape, parent=1)[0])
+    cmds.select(exportSelection)
+    return exportSelection

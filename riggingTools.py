@@ -676,7 +676,7 @@ def createArmRig(controlScale=1, pv=1, *args):
     armIk = cmds.ikHandle(sj=ik[0], ee=ik[2], sol='ikRPsolver')
     armIk = cmds.rename(armIk[0], controlName+'_ikHandle')
     wristIk = cmds.ikHandle(sj=ik[2], ee=ik[3], sol='ikSCsolver')
-    wristIk = cmds.rename(wristIk[0], controlName[0]+'_wrist_ikHandle')
+    wristIk = cmds.rename(wristIk[0], controlName+'_wrist_ikHandle')
     armIkTrans = cmds.createNode('transform', n=controlName+'_CTRL')
     alignAtoB(armIkTrans, controls[2])
     cmds.parent(armIkTrans, root)
@@ -1170,8 +1170,10 @@ def createEyeRig(**kwargs):
     for index, x in enumerate(lidParent):
         if index % 2:
             cmds.addAttr(aim[int(index/2)], ln='loLid', at='float', k=1)
+            reverse = cmds.createNode('reverse', n=x+'_reverse')
             cmds.connectAttr(aim[int(index/2)]+'.loLid', x+'.rotateZ')
-            cmds.connectAttr(aim[int(index/2)]+'.angle', x+'.rotateX')
+            cmds.connectAttr(aim[int(index/2)]+'.angle', reverse+'.inputX')
+            cmds.connectAttr(reverse+'.outputX', x+'.rotateX')
         else:
             cmds.addAttr(aim[int(index/2)], ln='upLid', at='float', k=1)
             cmds.addAttr(aim[int(index/2)], ln='angle', at='float', k=1)
@@ -1695,9 +1697,10 @@ def createSpineRig(*args):
     #Clean Up
     for cluster in clustersPar:
         cmds.parent(cluster, cmds.listRelatives(args[0], p=1))
-    lockChannels(1, 1, 1, 0, loVector[0], hiVector[0])
-    cmds.setAttr(loVector[0]+'.visibility', 0)
-    cmds.setAttr(hiVector[0]+'.visibility', 0)
+    cleanUp = [loVector[0], hiVector[0], args[3], ik[0]]
+    lockChannels(1, 1, 1, 0, cleanUp[0], cleanUp[1], cleanUp[2])
+    for obj in cleanUp:
+        cmds.setAttr(obj+'.visibility', 0)
 
 def skinBones(*args):
     skin = args or cmds.ls(sl=1)
