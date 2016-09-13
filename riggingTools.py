@@ -59,6 +59,9 @@ class armRigger(dox_OptionsWindow):
                 'Arm',
                 'Hand'
             ],
+            v1 = 1,
+            v2 = 1,
+            v3 = 1,
             numberOfCheckBoxes=3
         )
         cmds.separator(height=10)
@@ -77,7 +80,7 @@ class armRigger(dox_OptionsWindow):
         )
         self.clavicleText = cmds.textField(
             annotation='Clavicle Bone',
-            text='None',
+            text=None,
             w=250
         )
         self.clavicleButton = cmds.button(
@@ -93,7 +96,7 @@ class armRigger(dox_OptionsWindow):
         )
         self.shoulderText = cmds.textField(
             annotation='Shoulder Bone',
-            text='None',
+            text=None,
             w=250
         )
         self.shoulderButton = cmds.button(
@@ -109,7 +112,7 @@ class armRigger(dox_OptionsWindow):
         )
         self.elbowText = cmds.textField(
             annotation='Elbow Bone',
-            text='None',
+            text=None,
             w=250
         )
         self.elbowButton = cmds.button(
@@ -125,7 +128,7 @@ class armRigger(dox_OptionsWindow):
         )
         self.wristText = cmds.textField(
             annotation='Wrist Bone',
-            text='None',
+            text=None,
             w=250
         )
         self.wristButton = cmds.button(
@@ -161,13 +164,22 @@ class armRigger(dox_OptionsWindow):
             v=1, min=0, max=2
         )
     def addClavicleCmd(self, *args):
-        cmds.textField(self.clavicleText, e=1, text=str(cmds.ls(sl=1, type='joint', hd=1))[3:-2] or 'None')
+        bones = boneChain(cmds.ls(sl=1, type='joint', hd=1)[0])
+        cmds.textField(self.clavicleText, e=1, text=bones[0] or 'None')
+        cmds.textField(self.shoulderText, e=1, text=bones[1] or 'None')
+        cmds.textField(self.elbowText, e=1, text=bones[2] or 'None')
+        cmds.textField(self.wristText, e=1, text=bones[3] or 'None')
     def addShoulderCmd(self, *args):
-        cmds.textField(self.shoulderText, e=1, text=str(cmds.ls(sl=1, type='joint', hd=1))[3:-2] or 'None')
+        bones = boneChain(cmds.ls(sl=1, type='joint', hd=1)[0])
+        cmds.textField(self.shoulderText, e=1, text=bones[0] or 'None')
+        cmds.textField(self.elbowText, e=1, text=bones[1] or 'None')
+        cmds.textField(self.wristText, e=1, text=bones[2] or 'None')
     def addElbowCmd(self, *args):
-        cmds.textField(self.elbowText, e=1, text=str(cmds.ls(sl=1, type='joint', hd=1))[3:-2] or 'None')
+        bones = boneChain(cmds.ls(sl=1, type='joint', hd=1)[0])
+        cmds.textField(self.elbowText, e=1, text=bones[0] or 'None')
+        cmds.textField(self.wristText, e=1, text=bones[1] or 'None')
     def addWristCmd(self, *args):
-        cmds.textField(self.wristText, e=1, text=str(cmds.ls(sl=1, type='joint', hd=1))[3:-2] or 'None')
+        cmds.textField(self.wristText, e=1, text=str(cmds.ls(sl=1, type='joint', hd=1)[0]) or 'None')
     def applyBtnCmd(self, *args):
         clavIndex = cmds.checkBoxGrp(
             self.objType, q=1,
@@ -219,13 +231,6 @@ class legRigger(dox_OptionsWindow):
         self.title = 'Dox Leg Rigging Tool'
         self.actionName = 'Create'
     def displayOptions(self):
-        cmds.columnLayout()
-        cmds.separator(height=5)
-        self.objType = cmds.button(
-            label='Create Foot Locators',
-            w=120, c=self.addLocatorsCmd
-        )
-        cmds.separator(height=10)
         self.xformGrp = cmds.frameLayout(
             label='Skinned Bones to Rig',
             collapsable=True,
@@ -241,7 +246,7 @@ class legRigger(dox_OptionsWindow):
         )
         self.hipText = cmds.textField(
             annotation='Hip Bone',
-            text='None',
+            text=None,
             w=250
         )
         self.hipButton = cmds.button(
@@ -257,7 +262,7 @@ class legRigger(dox_OptionsWindow):
         )
         self.kneeText = cmds.textField(
             annotation='Knee Bone',
-            text='None',
+            text=None,
             w=250
         )
         self.kneeButton = cmds.button(
@@ -273,7 +278,7 @@ class legRigger(dox_OptionsWindow):
         )
         self.ankleText = cmds.textField(
             annotation='Ankle Bone',
-            text='None',
+            text=None,
             w=250
         )
         self.ankleButton = cmds.button(
@@ -289,30 +294,25 @@ class legRigger(dox_OptionsWindow):
         )
         self.ballText = cmds.textField(
             annotation='Ball Bone',
-            text='None',
+            text=None,
             w=250
         )
         self.ballButton = cmds.button(
             label='add', w=50,
             c=self.addBallCmd
         )
-        self.toesLabel = cmds.textField(
-            annotation='Toes Bone',
-            text='Toes Bone',
-            bgc=[0.1,0.06,0.06],
-            editable=0,
-            w=115
-        )
-        self.toesText = cmds.textField(
-            annotation='Toes Bone',
-            text='None',
-            w=250
-        )
-        self.toesButton = cmds.button(
-            label='add', w=50,
-            c=self.addToesCmd
-        )
         cmds.setParent('..')
+        cmds.columnLayout()
+        cmds.separator(height=5)
+        self.objType = cmds.button(
+            label='Create Foot Locators',
+            w=120, c=self.addLocatorsCmd
+        )
+        cmds.separator(height=10)
+        self.toeBool = cmds.checkBox(
+            label='Rig Toes',
+            v = 1
+        )
         cmds.setParent('..')
         self.attrGrp = cmds.frameLayout(
             label='Rig Attributes',
@@ -341,19 +341,24 @@ class legRigger(dox_OptionsWindow):
             v=1, min=0, max=2
         )
     def addLocatorsCmd(self, *args):
-        self.locators = createFootLocators()
+        self.locators = createFootLocators(anklePos = cmds.textField(self.ankleText, q=1, text=1), ballPos =  cmds.textField(self.ballText, q=1, text=1))
     def addHipCmd(self, *args):
-        cmds.textField(self.hipText, e=1, text=str(cmds.ls(sl=1, type='joint', hd=1))[3:-2] or 'None')
+        bones = boneChain(cmds.ls(sl=1, type='joint', hd=1)[0])
+        cmds.textField(self.hipText, e=1, text=bones[0] or 'None')
+        cmds.textField(self.kneeText, e=1, text=bones[1] or 'None')
+        cmds.textField(self.ankleText, e=1, text=bones[2] or 'None')
+        cmds.textField(self.ballText, e=1, text=bones[3] or 'None')
     def addKneeCmd(self, *args):
-        cmds.textField(self.kneeText, e=1, text=str(cmds.ls(sl=1, type='joint', hd=1))[3:-2] or 'None')
+        bones = boneChain(cmds.ls(sl=1, type='joint', hd=1)[0])
+        cmds.textField(self.kneeText, e=1, text=bones[0] or 'None')
+        cmds.textField(self.ankleText, e=1, text=bones[1] or 'None')
+        cmds.textField(self.ballText, e=1, text=bones[2] or 'None')
     def addAnkleCmd(self, *args):
-        cmds.textField(self.ankleText, e=1, text=str(cmds.ls(sl=1, type='joint', hd=1))[3:-2] or 'None')
+        bones = boneChain(cmds.ls(sl=1, type='joint', hd=1)[0])
+        cmds.textField(self.ankleText, e=1, text=bones[0] or 'None')
+        cmds.textField(self.ballText, e=1, text=bones[1] or 'None')
     def addBallCmd(self, *args):
         cmds.textField(self.ballText, e=1, text=str(cmds.ls(sl=1, type='joint', hd=1))[3:-2] or 'None')
-    def addToesCmd(self, *args):
-        toes = cmds.ls(sl=1, type='joint')
-        toesString = ', '.join(toes)
-        cmds.textField(self.toesText, e=1, text=toesString or 'None')
     def applyBtnCmd(self, *args):
         hipBone = cmds.textField(
             self.hipText, q=1,
@@ -371,11 +376,10 @@ class legRigger(dox_OptionsWindow):
             self.ballText, q=1,
             text=1
         )
-        toeBones = cmds.textField(
-            self.toesText, q=1,
-            text=1
+        toes = cmds.checkBox(
+            self.toeBool, q=1,
+            v=1
         )
-        toeBones = toeBones.split(', ')
         scale = cmds.floatField(
             self.scaleAttr, q=1,
             v=1
@@ -385,9 +389,11 @@ class legRigger(dox_OptionsWindow):
             v=1
         )
         leg = [hipBone, kneeBone, ankleBone, ballBone]
-        if not toeBones[0] == 'None':
-            for toe in toeBones:
-                leg.append(toe)
+        if toes and cmds.listRelatives(ballBone):
+            for toe in cmds.listRelatives(ballBone):
+                for bone in boneChain(toe):
+                    leg.append(bone)
+        print self.locators
         createLegRig(scale,poleVector,legBones=leg,legLoc=self.locators)
         cmds.select(cl=1)
 
@@ -776,12 +782,40 @@ def createArmRig(controlScale=1, pv=1, *args):
     lockChannels(0, 0, 0, 1, armIkTrans, poleVector)
     zeroRadius(*parents)
 
-def createFootLocators():
-    locatorsNames = ['ankle', 'heel', 'toe', 'ball', 'toeWiggle']
+def boneChain(*args):
+    boneChain = [args[0]]
+    index = 0
+    while cmds.listRelatives(boneChain[index]):
+        childeren = cmds.listRelatives(boneChain[index])
+        for child in childeren:
+            if child.find('Twist') >= 0:
+                childeren.remove(child)
+            if child.find('twist') >= 0:
+                childeren.remove(child)
+        boneChain.append(childeren[0])
+        index += 1
+    return boneChain
+
+def createFootLocators(anklePos = None, ballPos = None):
+    if anklePos and ballPos:
+        locatorNames = {
+            'ankle':[cmds.xform(anklePos, q=1, ws=1, t=1)[0], cmds.xform(anklePos, q=1, ws=1, t=1)[1], cmds.xform(anklePos, q=1, ws=1, t=1)[2]],
+            'heel':[cmds.xform(anklePos, q=1, ws=1, t=1)[0], 0, -20],
+            'toe':[cmds.xform(anklePos, q=1, ws=1, t=1)[0], 0, 30],
+            'ball':[cmds.xform(ballPos, q=1, ws=1, t=1)[0], 0, cmds.xform(ballPos, q=1, ws=1, t=1)[2]],
+            'toeWiggle':[cmds.xform(ballPos, q=1, ws=1, t=1)[0], 0, cmds.xform(ballPos, q=1, ws=1, t=1)[2]]}
+    else:
+        locatorNames = {
+            'ankle':[0,0,0],
+            'heel':[0,0,10],
+            'toe':[0,0,20],
+            'ball':[0,0,30],
+            'toeWiggle':[0,0,40]}
     locators = []
-    for loc in locatorsNames:
-        locators.append(cmds.spaceLocator(n=loc+'_loc')[0])
-        cmds.xform(locators[locatorsNames.index(loc)], t=(0, 0, locatorsNames.index(loc)*10))
+    order = ['ankle', 'heel', 'toe', 'ball', 'toeWiggle']
+    for index, loc in enumerate(order):
+        locators.extend(cmds.spaceLocator(n=loc+'_loc'))
+        cmds.xform(locators[index], t=(locatorNames[loc][0], locatorNames[loc][1], locatorNames[loc][2]))
     return locators
 
 def findRoot(*args):
@@ -1140,18 +1174,20 @@ def setupStrechyIk(condition, control, curve, ikBones):
         cmds.connectAttr(stretchBlender+'.outputR', bone+'.scaleX')
     cmds.setAttr(stretchBlender+'.color2R', 1)
 
-def createEyeRig(**kwargs):
-    eyeCTRL, eyeParent = createControlJoint(*kwargs['eyes'])
-    lidCTRL, lidParent = createControlJoint(*kwargs['lids'])
-    aimParent = cmds.createNode('transform', n="Eye_Aim_CTRL")
+def createEyeRig(eyes = None, lids = None):
+    eyeCTRL, eyeParent = createControlJoint(*eyes)
+    controlName = str(eyeCTRL[0]).replace('L_', '').replace('R_', '').replace('_CTRL', '_Aim_CTRL')
+    if lids:
+        lidCTRL, lidParent = createControlJoint(*lids)
+    aimParent = cmds.createNode('transform', n=controlName)
     eyeHeight = cmds.xform(eyeCTRL[0], q=1, ws=1, t=1)[1]
     cmds.xform(aimParent, ws=1, t=(0, eyeHeight, 300))
     cmds.makeIdentity(aimParent, apply=1)
     shape = shapes.capsule(8)
     cmds.xform(shape, ws=1, t=(0, eyeHeight, 300), ro=(90,0,0), s=(3,3,3))
     addControlShape(shape, aimParent)
-    aim = [cmds.createNode('transform', n="L_Eye_Aim_CTRL")]
-    aim.append(cmds.createNode('transform', n="R_Eye_Aim_CTRL"))
+    aim = [cmds.createNode('transform', n=eyeCTRL[0].replace('_CTRL', '_Aim_CTRL'))]
+    aim.append(cmds.createNode('transform', n=eyeCTRL[1].replace('_CTRL', '_Aim_CTRL')))
     # Eye target setup
     for index, x in enumerate(aim):
         cmds.parent(x, aimParent)
@@ -1167,18 +1203,20 @@ def createEyeRig(**kwargs):
         addControlShape(shape, x)
         lockChannels(0,1,1,0, x)
     # Eye Lid control setup
-    for index, x in enumerate(lidParent):
-        if index % 2:
-            cmds.addAttr(aim[int(index/2)], ln='loLid', at='float', k=1)
-            reverse = cmds.createNode('reverse', n=x+'_reverse')
-            cmds.connectAttr(aim[int(index/2)]+'.loLid', x+'.rotateZ')
-            cmds.connectAttr(aim[int(index/2)]+'.angle', reverse+'.inputX')
-            cmds.connectAttr(reverse+'.outputX', x+'.rotateX')
-        else:
-            cmds.addAttr(aim[int(index/2)], ln='upLid', at='float', k=1)
-            cmds.addAttr(aim[int(index/2)], ln='angle', at='float', k=1)
-            cmds.connectAttr(aim[int(index/2)]+'.upLid', x+'.rotateZ')
-            cmds.connectAttr(aim[int(index/2)]+'.angle', x+'.rotateX')
+    if lids:
+        lidCTRL, lidParent = createControlJoint(*lids)
+        for index, x in enumerate(lidParent):
+            if index % 2:
+                cmds.addAttr(aim[int(index/2)], ln='loLid', at='float', k=1)
+                reverse = cmds.createNode('reverse', n=x+'_reverse')
+                cmds.connectAttr(aim[int(index/2)]+'.loLid', x+'.rotateZ')
+                cmds.connectAttr(aim[int(index/2)]+'.angle', reverse+'.inputX')
+                cmds.connectAttr(reverse+'.outputX', x+'.rotateX')
+            else:
+                cmds.addAttr(aim[int(index/2)], ln='upLid', at='float', k=1)
+                cmds.addAttr(aim[int(index/2)], ln='angle', at='float', k=1)
+                cmds.connectAttr(aim[int(index/2)]+'.upLid', x+'.rotateZ')
+                cmds.connectAttr(aim[int(index/2)]+'.angle', x+'.rotateX')
     cmds.aimConstraint(cmds.listRelatives(eyeParent[0], p=1), aimParent, aim=(0,0,-1.0), mo=1)
     lockChannels(0,1,1,0, aimParent)
     cmds.parent(aimParent, 'Root_CTRL')

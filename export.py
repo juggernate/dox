@@ -75,7 +75,7 @@ def select(Mesh = False):
         cmds.select('*Constraint*', d=1)
     if Mesh:
         joints = cmds.ls(sl=1)
-        clusters = list(set(cmds.listConnections(joints,type='skinCluster')))
+        clusters = [cmds.listConnections(joints,type='skinCluster')]
         for cluster in clusters:
             shape = cmds.skinCluster(cluster, q=1, geometry=1)
             exportSelection.append(cmds.listRelatives(shape, parent=1)[0])
