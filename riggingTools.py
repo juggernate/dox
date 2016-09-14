@@ -393,7 +393,6 @@ class legRigger(dox_OptionsWindow):
             for toe in cmds.listRelatives(ballBone):
                 for bone in boneChain(toe):
                     leg.append(bone)
-        print self.locators
         createLegRig(scale,poleVector,legBones=leg,legLoc=self.locators)
         cmds.select(cl=1)
 
@@ -413,7 +412,7 @@ class rootRigger(dox_OptionsWindow):
         )
         self.nameText = cmds.textField(
             annotation='Character Name',
-            text='None',
+            text=None,
             w=250
         )
         cmds.separator()
@@ -426,7 +425,7 @@ class rootRigger(dox_OptionsWindow):
         )
         self.pelvisText = cmds.textField(
             annotation='Pelvis Bone',
-            text='None',
+            text=None,
             w=250
         )
         self.pelvisButton = cmds.button(
@@ -467,33 +466,22 @@ class spineRigger(dox_OptionsWindow):
         self.title = 'Dox Spine Rigging Tool'
         self.actionName = 'Create'
     def displayOptions(self):
+        self.xformGrp = cmds.frameLayout(
+            label='Spine Joints and Curve',
+            collapsable=True,
+            w=415
+        )
         self.xformCol = cmds.rowColumnLayout(nc=3)
-        self.pelvisLabel = cmds.textField(
-            annotation='Pelvis Control',
-            text='Pelvis Control',
-            bgc=[0.1,0.06,0.06],
-            editable=0,
-            w=115
-        )
-        self.pelvisText = cmds.textField(
-            annotation='Pelvis Control',
-            text='None',
-            w=250
-        )
-        self.pelvisButton = cmds.button(
-            label='add', w=50,
-            c=self.addPelvisCmd
-        )
         self.chestLabel = cmds.textField(
-            annotation='Chest Control',
-            text='Chest Control',
+            annotation='Chest Joint',
+            text='Chest Joint',
             bgc=[0.1,0.06,0.06],
             editable=0,
             w=115
         )
         self.chestText = cmds.textField(
-            annotation='Chest Control',
-            text='None',
+            annotation='Chest Joint',
+            text=None,
             w=250
         )
         self.chestButton = cmds.button(
@@ -509,7 +497,7 @@ class spineRigger(dox_OptionsWindow):
         )
         self.spineText = cmds.textField(
             annotation='First Spine Joint',
-            text='None',
+            text=None,
             w=250
         )
         self.spineButton = cmds.button(
@@ -525,26 +513,37 @@ class spineRigger(dox_OptionsWindow):
         )
         self.splineText = cmds.textField(
             annotation='Spline Curve',
-            text='None',
+            text=None,
             w=250
         )
         self.splineButton = cmds.button(
             label='add', w=50,
             c=self.addSplineCmd
         )
-    def addPelvisCmd(self, *args):
-        cmds.textField(self.pelvisText, e=1, text=str(cmds.ls(sl=1, type='joint', hd=1))[3:-2] or 'None')
-    def addChestCmd(self, *args):
-        cmds.textField(self.chestText, e=1, text=str(cmds.ls(sl=1, type='joint', hd=1))[3:-2] or 'None')
-    def addSpineCmd(self, *args):
-        cmds.textField(self.spineText, e=1, text=str(cmds.ls(sl=1, type='joint', hd=1))[3:-2] or 'None')
-    def addSplineCmd(self, *args):
-        cmds.textField(self.splineText, e=1, text=str(cmds.ls(sl=1, type='transform', hd=1))[3:-2] or 'None')
-    def applyBtnCmd(self, *args):
-        pelvis = cmds.textField(
-            self.pelvisText, q=1,
-            text=1
+        cmds.setParent('..')
+        self.attrGrp = cmds.frameLayout(
+            label='Rig Attributes',
+            collapsable=True,
+            w=415
         )
+        self.xformCol = cmds.rowColumnLayout(nc=2)
+        self.scaleLabel = cmds.textField(
+            annotation='The scale of the shape object used to select the rig.',
+            text='Control Scale',
+            bgc=[0.06,0.06,0.1],
+            editable=0,
+            w=115
+        )
+        self.scaleAttr = cmds.floatField(
+            v=1, min=0, max=10
+        )
+    def addChestCmd(self, *args):
+        cmds.textField(self.chestText, e=1, text=str(cmds.ls(sl=1, type='joint', hd=1)[0]) or 'None')
+    def addSpineCmd(self, *args):
+        cmds.textField(self.spineText, e=1, text=str(cmds.ls(sl=1, type='joint', hd=1)[0]) or 'None')
+    def addSplineCmd(self, *args):
+        cmds.textField(self.splineText, e=1, text=str(cmds.ls(sl=1, type='transform', hd=1)[0]) or 'None')
+    def applyBtnCmd(self, *args):
         chest = cmds.textField(
             self.chestText, q=1,
             text=1
@@ -557,7 +556,12 @@ class spineRigger(dox_OptionsWindow):
             self.splineText, q=1,
             text=1
         )
-        createSpineRig(pelvis,chest,spine,spline)
+        scale = cmds.floatField(
+            self.scaleAttr, q=1,
+            v=1
+        )
+        chest = createChestRig(scale, chest)
+        createSpineRig(chest,spine,spline)
         cmds.select(cl=1)
 
 def createRootRig(controlScale=1, name='Character', *args):
@@ -585,6 +589,8 @@ def createRootRig(controlScale=1, name='Character', *args):
         cmds.setAttr(pelvis+scale, k=1, l=0)
         cmds.disconnectAttr(pelvisControl[0]+scale,pelvis+scale)
     cmds.scaleConstraint(pelvisControl[0],pelvis)
+    if cmds.objExists('Meshes'):
+        cmds.parent('Meshes', topGroup)
     lockChannels(0,0,1,0,pelvis)
     hideChannels(pelvis)
 
@@ -753,7 +759,7 @@ def createArmRig(controlScale=1, pv=1, *args):
     cmds.connectAttr(stretchEnd+'.translate', distance+'.point2')
     armLen = (cmds.xform(ik[1], q=1, t=1)[0])+(cmds.xform(ik[2], q=1, t=1)[0])
     distanceMult = cmds.createNode('multiplyDivide', n=controlName+'_distanceMult')
-    cmds.setAttr(distanceMult+'.input1X', armLen)
+    cmds.setAttr(distanceMult+'.input1X', abs(armLen))
     cmds.connectAttr(root+'.scaleY', distanceMult+'.input2X')
     distanceDivide = cmds.createNode('multiplyDivide', n=controlName+'_distanceDivide')
     cmds.setAttr(distanceDivide+'.operation', 2)
@@ -772,6 +778,8 @@ def createArmRig(controlScale=1, pv=1, *args):
     cmds.connectAttr(stretchBlender+'.outputR', ik[1]+'.scaleX')
     cmds.setAttr(stretchBlender+'.color2R', 1)
     #Lock and Hide
+    untouchables = [stretchStart, stretchEnd]
+    createDoNotTouch(untouchables)
     lockChannels(1, 1, 1, 0, *rig)
     hideChannels(*ik)
     hideChannels(armIk, wristIk)
@@ -937,7 +945,7 @@ def createLegRig(controlScale=1, pv=1, **kwargs):
         snapAtoB(prefix+ori, footFollow)
         cmds.parent(prefix+ori, footFollow)
         cmds.makeIdentity(prefix+ori, apply=1)
-        if ori == 'Foot_orient_all':
+        if ori == '_Foot_orient_all':
             cmds.orientConstraint(legIkTrans, prefix+ori)
         else:
             cmds.orientConstraint(legIkTrans, prefix+ori, sk=['x','z'])
@@ -1001,7 +1009,7 @@ def createLegRig(controlScale=1, pv=1, **kwargs):
     cmds.connectAttr(stretchEnd+'.translate', distance+'.point2')
     legLen = (cmds.xform(ik[1], q=1, t=1)[0])+(cmds.xform(ik[2], q=1, t=1)[0])
     distanceMult = cmds.createNode('multiplyDivide', n=controlName+'_distanceMult')
-    cmds.setAttr(distanceMult+'.input1X', legLen)
+    cmds.setAttr(distanceMult+'.input1X', abs(legLen))
     cmds.connectAttr(root+'.scaleY', distanceMult+'.input2X')
     distanceDivide = cmds.createNode('multiplyDivide', n=controlName+'_distanceDivide')
     cmds.setAttr(distanceDivide+'.operation', 2)
@@ -1020,6 +1028,8 @@ def createLegRig(controlScale=1, pv=1, **kwargs):
     cmds.connectAttr(stretchBlender+'.outputR', ik[1]+'.scaleX')
     cmds.setAttr(stretchBlender+'.color2R', 1)
     #Lock and Hide
+    untouchables = [stretchStart, stretchEnd]
+    createDoNotTouch(untouchables)
     lockChannels(1, 1, 1, 0, *rig)
     hideChannels(*ik)
     hideChannels(legIk[0], ballIk[0], toeIk[0])
@@ -1697,17 +1707,18 @@ def easeInOutCubic(*args):
         return (t-1)*(2*t-2)*(2*t-2)+1
 
 def createSpineRig(*args):
-    controlName = args[2].split('_')[0]
-    spine = cmds.listRelatives(args[2], ad=1, typ='joint')
-    spine.append(args[2])
+    controlName = args[1].split('_')[0]
+    spine = cmds.listRelatives(args[1], ad=1, typ='joint')
+    spine.append(args[1])
     spine = reversed(spine)
     controls, parents = createControlJoint(*spine, par=False)
+    pelvisControl = cmds.listRelatives(controls[0], p=1)[0]
     root = findRoot(controls[0])
-    ik = cmds.ikHandle(scv=0, fj=1, c=args[3], pcv=0, sj=controls[0], ee=controls[-1], sol='ikSplineSolver', n=controlName+'_ikHandle')
-    clusters, clustersPar = createSpineClusters(args[3])
-    cmds.parent(clusters[0], args[0])
-    cmds.parent(clusters[len(clusters)-1], args[1])
-    curveLength = cmds.arclen(args[3], ch=1)
+    ik = cmds.ikHandle(scv=0, fj=1, c=args[2], pcv=0, sj=controls[0], ee=controls[-1], sol='ikSplineSolver', n=controlName+'_ikHandle')
+    clusters, clustersPar = createSpineClusters(args[2])
+    cmds.parent(clusters[0], pelvisControl)
+    cmds.parent(clusters[len(clusters)-1], args[0])
+    curveLength = cmds.arclen(args[2], ch=1)
     lengthDivide = cmds.createNode('multiplyDivide', n=controlName+'_lengthDivide')
     cmds.connectAttr(curveLength+'.arcLength', lengthDivide+'.input1X')
     cmds.setAttr(lengthDivide+'.operation', 2)
@@ -1718,27 +1729,48 @@ def createSpineRig(*args):
     stretchSwitch = cmds.createNode('blendColors', n=controlName+'_stretchSwitch')
     cmds.connectAttr(lengthDivide+'.outputX', stretchSwitch+'.color1R')
     cmds.setAttr(stretchSwitch+'.color2R', 1)
-    cmds.addAttr(args[1], ln=controlName.lower()+'Stretch', at='float', k=1, min=0, max=1, dv=1)
-    cmds.connectAttr(args[1]+'.'+controlName.lower()+'Stretch', stretchSwitch+'.blender')
+    cmds.addAttr(args[0], ln=controlName.lower()+'Stretch', at='float', k=1, min=0, max=1, dv=1)
+    cmds.connectAttr(args[0]+'.'+controlName.lower()+'Stretch', stretchSwitch+'.blender')
     for bone in controls[:-1]:
         cmds.connectAttr(stretchSwitch+'.outputR', bone+'.scaleX')
     loVector = cmds.spaceLocator(n=controlName+'_loVector')
     hiVector = cmds.spaceLocator(n=controlName+'_hiVector')
     alignAtoB(loVector, controls[0])
     alignAtoB(hiVector, controls[-1])
-    cmds.parent(loVector, args[0])
-    cmds.parent(hiVector, args[1])
+    cmds.parent(loVector, pelvisControl)
+    cmds.parent(hiVector, args[0])
     cmds.setAttr(ik[0]+'.dTwistControlEnable', 1)
     cmds.setAttr(ik[0]+'.dWorldUpType', 4)
     cmds.connectAttr(loVector[0]+'.worldMatrix', ik[0]+'.dWorldUpMatrix')
     cmds.connectAttr(hiVector[0]+'.worldMatrix', ik[0]+'.dWorldUpMatrixEnd')
     #Clean Up
+    untouchables = [ik[0], args[2]]
+    createDoNotTouch(untouchables)
     for cluster in clustersPar:
-        cmds.parent(cluster, cmds.listRelatives(args[0], p=1))
-    cleanUp = [loVector[0], hiVector[0], args[3], ik[0]]
+        cmds.parent(cluster, cmds.listRelatives(pelvisControl, p=1))
+    cleanUp = [loVector[0], hiVector[0], args[2], ik[0]]
     lockChannels(1, 1, 1, 0, cleanUp[0], cleanUp[1], cleanUp[2])
     for obj in cleanUp:
         cmds.setAttr(obj+'.visibility', 0)
+
+def createChestRig(controlScale=1, *args):
+    chestControl, chestParent = createControlJoint(args[0])
+    cmds.parent(chestParent, 'Body_CTRL')
+    shape = shapes.cube(2)
+    snapAtoB(shape, chestControl)
+    cmds.xform(shape, s=(30*controlScale, 10*controlScale, 25*controlScale))
+    addControlShape(shape, chestControl)
+    return chestControl[0]
+
+def createDoNotTouch(*args):
+    top = cmds.listRelatives('Root_CTRL', p=1)[0]
+    if not cmds.objExists('DoNotTouch'):
+        grp = cmds.createNode('transform', n='DoNotTouch')
+        cmds.parent(grp, top)
+        lockChannels(1, 1, 1, 0, grp)
+        cmds.setAttr(grp+'.visibility', 0)
+    for arg in args:
+        cmds.parent(arg, 'DoNotTouch')
 
 def skinBones(*args):
     skin = args or cmds.ls(sl=1)
