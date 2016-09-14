@@ -637,7 +637,7 @@ def createArmRig(controlScale=1, pv=1, *args):
     prefix = limbPrefix(armBones[0])
     root = findRoot(parents[0])
     controlBase = [str(controls[0])[:-5], str(controls[1])[:-5], str(controls[2])[:-5]]
-    controlName = prefix+'_arm'
+    controlName = prefix+'_Arm'
     attrName = prefix.lower()+'_arm'
     color = limbColor(armBones[0])
     chest = cmds.listRelatives(parents[0], p=1)
@@ -1637,7 +1637,7 @@ def createPoleVector(pv=1, name='limb', *args):
     rAnglePos = boneA+(armDir.normal()*rAngleLen)
     poleVectorDir = boneB-rAnglePos
     poleVectorPos = rAnglePos+poleVectorDir.normal()*armLength
-    poleVector = cmds.createNode('transform', n=name+'_pv')
+    poleVector = cmds.createNode('transform', n=name+'_pv_CTRL')
     cmds.xform(poleVector, t=poleVectorPos)
     return poleVector
 

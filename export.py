@@ -74,7 +74,7 @@ def select(Mesh = False):
     if str(exportSelection).find('*Constraint*') > -1:
         cmds.select('*Constraint*', d=1)
     if Mesh:
-        joints = cmds.ls(sl=1)
+        joints = cmds.ls(sl=1) or 'Pelvis'
         clusters = [cmds.listConnections(joints,type='skinCluster')]
         for cluster in clusters:
             shape = cmds.skinCluster(cluster, q=1, geometry=1)
