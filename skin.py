@@ -1,8 +1,29 @@
+from maya.OpenMayaAnim import MFnSkinCluster
+# from maya.OpenMaya import MIntArray, MDagPathArray
+import maya.OpenMaya as om
 import maya.cmds as cmds
 
-import apiExtensions
-from maya.OpenMayaAnim import MFnSkinCluster
-from maya.OpenMaya import MIntArray, MDagPathArray
+def asMObject( otherMobject ):
+    '''
+    tries to cast the given obj to an mobject - it can be string
+    '''
+    if isinstance( otherMobject, basestring ):
+        sel = MSelectionList()
+        sel.add( otherMobject )
+
+        if '.' in otherMobject:
+            plug = MPlug()
+            sel.getPlug( 0, plug )
+            tmp = plug.asMObject()
+            tmp.__MPlug__ = plug
+        else:
+            tmp = MObject()
+            sel.getDependNode( 0, tmp )
+
+        return tmp
+
+    if isinstance( otherMobject, (MObject, MObjectHandle) ):
+        return otherMobject
 
 def setSkinWeights( skinCluster, vertJointWeightData ):
     '''
@@ -20,7 +41,7 @@ def setSkinWeights( skinCluster, vertJointWeightData ):
         idxJointWeight.append( (idx, jointsAndWeights) )
 
     #get an MObject for the skin cluster node
-    skinCluster = apiExtensions.asMObject( skinCluster )
+    skinCluster = asMObject( skinCluster )
     skinFn = MFnSkinCluster( skinCluster )
 
     #construct a dict mapping joint names to joint indices
@@ -46,11 +67,18 @@ def setSkinWeights( skinCluster, vertJointWeightData ):
         weightFmtStr = baseFmtStr % vertIdx +'.weights[%d]'
 
         #clear out any existing skin data - and awesomely we cannot do this with the api - so we need to use a weird ass mel command
-        for n in range( tmpIntArray.length() ):
-            removeMultiInstance( weightFmtStr % tmpIntArray[n] )
+        # for n in range( tmpIntArray.length() ):
+            # cmds.removeMultiInstance( weightFmtStr % tmpIntArray[n] )
 
         #at this point using the api or mel to set the data is a moot point...  we have the strings already so just use mel
         for joint, weight in jointsAndWeights:
             if weight:
-                infIdx = jApiIndices[ joint ]
+                try:
+                    infIdx = jApiIndices[ joint ]
+                except KeyError:
+                    try:
+                        infIdx = jApiIndices[ joint.split( '|' )[0] ]
+                    except KeyError: continue
+
                 setAttr( weightFmtStr % infIdx, weight )
+                print weightFmtStr % infIdx
